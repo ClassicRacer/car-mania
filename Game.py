@@ -137,7 +137,7 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "Do not miss a checkpoint otherwise you cannot complete a lap.", 320, r, g, b)
       centerTextScreen(win, font, "The game encourages you to express your creativity by creating cars and levels.", 350, r, g, b)
       centerTextScreen(win, font, "The controls of the gameplay are similar to those of a traditional car racing game:", 410, r, g, b)
-      centerTextScreen(win, font, "Use the arrow keys or WASD to move your car aroud.", 440, r, g, b)
+      centerTextScreen(win, font, "Use the arrow keys or WASD to move your car around.", 440, r, g, b)
       centerTextScreen(win, font, "Use the SPACE key to apply the brakes and slow your car down.", 470, r, g, b)
       centerTextScreen(win, font, "Use the ENTER key to pause the game.", 500, r, g, b)
       centerTextScreen(win, font, "You can drive in the main menu to practice these skills.", 560, r, g, b)
@@ -190,7 +190,7 @@ def mainMenu(win, level, cam):
       win.blit(bg, (0, 200))
       centerTextScreen(win, font, "The car creator has two sections:", 200, r, g, b)
       centerTextScreen(win, font, "The first section will ask you to import a car image.", 230, r, g, b)
-      centerTextScreen(win, font, "Keep in mind to have an aerial image of a car facing north (perferably with resolution 190x350) in JPEG or PNG format.", 260, r, g, b)
+      centerTextScreen(win, font, "Keep in mind to have an aerial image of a car facing north (preferably with resolution 190x350) in JPEG or PNG format.", 260, r, g, b)
       centerTextScreen(win, font, "The second section will let you set the car's name & performance.", 320, r, g, b)
       centerTextScreen(win, font, "This consists of Top Speed, Acceleration, Handling and Offroad.", 350, r, g, b)
       centerTextScreen(win, font, "You can also set the engine type of the car and test how the car will sound.", 380, r, g, b)
@@ -222,7 +222,7 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "The code on the right hand side of the advanced properties is an alternative method of editing a level rather than using the editor.", 470, r, g, b)
       centerTextScreen(win, font, "More information towards editing a level using code can be found within the advanced properties,", 500, r, g, b)
       centerTextScreen(win, font, "You can optionally set music to play in the background of a level.", 530, r, g, b)
-      centerTextScreen(win, font, "If you are using this option, make sure to have a music file in WAV format peferably with 48000 Hz as the frequency.", 560, r, g, b)
+      centerTextScreen(win, font, "If you are using this option, make sure to have a music file in WAV format preferably with 48000 Hz as the frequency.", 560, r, g, b)
       centerTextScreen(win, font, "For this to work, the WAV file must be 16-bit or lower.", 590, r, g, b)
       centerTextScreen(win, font, "Good luck creating levels!", 650, r, g, b)
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"LEVEL_CREATOR_MENU")
@@ -2458,4 +2458,4 @@ while run:
    clicked = pyg.mouse.get_pressed()
    pyg.display.update()
    clock.tick(60) #FPS
-pyg.quit()  # Quit the game
+pyg.quit()
