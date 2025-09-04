@@ -1,5 +1,6 @@
 
 import os, ctypes, shutil, pickle
+import tkinter.font as tkFont
 from csv import reader
 from random import randint, choice
 from math import*
@@ -79,6 +80,15 @@ def invertCol(red, green, blue):
       return 0, 0, 0
    else:
       return 255, 255, 255
+   
+def getFont(size, for_tk=False):
+    key = (size, for_tk)
+    if key not in _font_cache:
+        if for_tk:
+            _font_cache[key] = tkFont.Font(family="Arial", size=size)
+        else:
+            _font_cache[key] = pyg.font.Font("assets/font.ttf", size)
+    return _font_cache[key]
 
 def mainMenu(win, level, cam):
    global menuMode
@@ -90,17 +100,17 @@ def mainMenu(win, level, cam):
    if menuMode not in ["TITLE_SCREEN", "MAIN_MENU"]:
       backButton(win, [r, g, b])
    if menuMode == "TITLE_SCREEN":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Car Mania", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       menuButton(win, font, halfScreen[0], screen[1] - 340, "Login", r, g, b, True,"LOGIN_PAGE")
       menuButton(win, font, halfScreen[0], screen[1] - 270, "Play as Guest", r, g, b, False,"GUEST_ACCOUNT")
       menuButton(win, font, halfScreen[0], screen[1] - 200, "Instructions", r, g, b, True,"INSTRUCTIONS")
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Credits", r, g, b, True,"CREDITS")
    elif menuMode == "LOGIN_PAGE":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Login", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       bg = pyg.Surface((screen[0], 240))
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
@@ -114,9 +124,9 @@ def mainMenu(win, level, cam):
       menuButton(win, font, halfScreen[0], screen[1] - 200, "Enter Details", r, g, b, False,"ENTER_DETAILS")
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Create Account", r, g, b, False,"CREATE_ACCOUNT")
    elif menuMode == "INSTRUCTIONS":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Gameplay Instructions", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       bg = pyg.Surface((screen[0], 450))
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
@@ -134,9 +144,9 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "Good luck!", 590, r, g, b)
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"TITLE_SCREEN")
    elif menuMode == "CREDITS":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Credits", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       bg = pyg.Surface((screen[0], 290))
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
@@ -153,9 +163,9 @@ def mainMenu(win, level, cam):
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
       win.blit(bg, (460, 150))
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Car Mania", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       centerTextScreen(win, font, "Welcome " + username + "!", 150, r, g, b)
       centerTextScreen(win, font, "Note: You can either play with the default set of cars/levels or create your own!", 190, r, g, b)
       menuButton(win, font, halfScreen[0], screen[1] - 410, "Play Game", r, g, b, False,"GET_CARS_DEFAULT")
@@ -164,16 +174,16 @@ def mainMenu(win, level, cam):
       menuButton(win, font, halfScreen[0], screen[1] - 200, "Options", r, g, b, False,"MENU_OPTIONS")
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Sign Out", r, g, b, True,"TITLE_SCREEN")
    elif menuMode == "CAR_CREATOR_MENU":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Car Creator Menu", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       menuButton(win, font, halfScreen[0], screen[1] - 270, "Create Car", r, g, b, False,"CREATE_CAR_DIRECTORY")
       menuButton(win, font, halfScreen[0], screen[1] - 200, "Edit Car", r, g, b, False,"EDIT_CAR")
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Instructions", r, g, b, True,"CAR_CREATOR_INSTRUCTIONS")
    elif menuMode == "CAR_CREATOR_INSTRUCTIONS":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Car Creator Instructions", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       bg = pyg.Surface((screen[0], 320))
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
@@ -187,16 +197,16 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "Good luck creating cars!", 440, r, g, b)
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"CAR_CREATOR_MENU")
    elif menuMode == "LEVEL_CREATOR_MENU":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Level Creator Menu", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       menuButton(win, font, halfScreen[0], screen[1] - 270, "Create Level", r, g, b, False,"LEVEL_CREATOR_RESET")
       menuButton(win, font, halfScreen[0], screen[1] - 200, "Edit Level", r, g, b, False,"EDIT_LEVEL")
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Instructions", r, g, b, True,"LEVEL_CREATOR_INSTRUCTIONS")
    elif menuMode == "LEVEL_CREATOR_INSTRUCTIONS":
-      font = pyg.font.SysFont("Berlin Sans FB", 100)
+      font = getFont(100)
       centerTextScreen(win, font, "Level Creator Instructions", 20, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       bg = pyg.Surface((screen[0], 520))
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
@@ -227,9 +237,9 @@ def carCreator(win):
    r2, g2, b2 = invertCol(r1, g1, b1)
    closeButton(win, [r1, g1, b1])
    backButton(win, [r1, g1, b1])
-   font = pyg.font.SysFont("Berlin Sans FB", 100)
+   font = getFont(100)
    centerTextScreen(win, font, carCreatorProperties["Name"], 10, r1, g1, b1)
-   font = pyg.font.SysFont("Berlin Sans FB", 30)
+   font = getFont(30)
    if carCreatorProperties["Image"] != None:
       angle += 1
       if angle == 360:
@@ -243,7 +253,7 @@ def carCreator(win):
    menuButton(win, font, halfScreen[0], screen[1] - 200, "Import Image", r1, g1, b1, False,"IMPORT_IMAGE")
    menuButton(win, font, halfScreen[0], screen[1] - 130, "Car Properties", r1, g1, b1, False,"CAR_OPTIONS")
    centerTextScreen(win, font, "For best results, import an image of a car from aerial view, facing north, with a resolution around (190x350)", screen[1] - 50, r1, g1, b1)
-   font = pyg.font.SysFont("Berlin Sans FB", 20)
+   font = getFont(20)
    size = 600
    x = halfScreen[0] - (size / 2)
    y = screen[1] - 360
@@ -345,9 +355,9 @@ def levelCreator(win, cam):
    title.set_alpha(150)
    title.fill((r1, g1, b1))
    win.blit(title, (0, 0))
-   font = pyg.font.SysFont("Berlin Sans FB", 100)
+   font = getFont(100)
    centerTextScreen(win, font, levelCreatorProperties["Name"], 10, r2, g2, b2)
-   font = pyg.font.SysFont("Berlin Sans FB", 30)
+   font = getFont(30)
    panel = pyg.Surface((screen[0]//5, screen[1] - 120))
    panel.set_alpha(150)
    panel.fill((r1, g1, b1))
@@ -424,7 +434,7 @@ def levelCreator(win, cam):
       arrowButton(win, [r1, g1, b1], [r2, g2, b2], 30, 590, "ACW")
       arrowButton(win, [r1, g1, b1], [r2, g2, b2], 310, 590, "CW")
       centerTextPanel(win, font, "Rotate", screen[0]//10, 600, r2, g2, b2)
-   font = pyg.font.SysFont("Berlin Sans FB", 20)
+   font = getFont(20)
    menuButton(win, font, screen[0]//10, 670, "Undo", r2, g2, b2, True,"UNDO_PIECE")
    menuButton(win, font, screen[0]//10, 740, "Redo", r2, g2, b2, True,"REDO_PIECE")
    menuButton(win, font, screen[0]//10, 810, "Advanced Properties", r2, g2, b2, False,"LEVEL_OPTIONS")
@@ -877,7 +887,7 @@ def carSelect(win, account):
    global carProperties, angle, car, mode, units
    win.fill((levelProperties["Colour"][level][0], levelProperties["Colour"][level][1], levelProperties["Colour"][level][2]))
    r, g, b = invertCol(levelProperties["Colour"][level][0], levelProperties["Colour"][level][1], levelProperties["Colour"][level][2])
-   font = pyg.font.SysFont("Berlin Sans FB", 100)
+   font = getFont(100)
    centerTextScreen(win, font, "Car Select", 20, r, g, b)
    closeButton(win, [r, g, b])
    backButton(win, [r, g, b])
@@ -893,7 +903,7 @@ def carSelect(win, account):
    carSprite = createSprite(x, y, carRect, rotate)
    allSprites = pyg.sprite.Group([carSprite])
    allSprites.draw(win)
-   font = pyg.font.SysFont("Berlin Sans FB", 30)
+   font = getFont(30)
    centerTextScreen(win, font, "Use the LEFT or RIGHT key to change the car", screen[1] - 80, r, g, b)
    if account == "Default":
       centerTextScreen(win, font, "Default Cars", 150, r, g, b)
@@ -909,16 +919,16 @@ def carSelect(win, account):
          centerTextScreen(win, font, "You can also play by creating a car", screen[1] - 50, r, g, b)
    else:
       centerTextScreen(win, font, account + "'s Cars", 150, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 25)
+      font = getFont(25)
       menuButton(win, font, halfScreen[0], screen[1] - 160, "View Default Cars", r, g, b, False, "GET_CARS_DEFAULT")
       if (key["Up"] or key["W"]) or (key["Down"] or key["S"]):
          playSound(sounds[0])
          pyg.time.wait(200)
          mode = "GET_CARS_DEFAULT"
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
    menuButton(win, font, halfScreen[0], screen[1] - 230, "Continue", r, g, b, False, "GET_LEVELS_DEFAULT")
    centerTextScreen(win, font, carProperties["Name"][car], 190, r, g, b)
-   font = pyg.font.SysFont("Berlin Sans FB", 20)
+   font = getFont(20)
    size = 600
    x = halfScreen[0] - (size / 2)
    y = screen[1] - 360
@@ -976,11 +986,11 @@ def levelSelect(win, account):
    bg.set_alpha(175)
    bg.fill((r1, g1, b1))
    win.blit(bg, (halfScreen[0] - 240, 150))
-   font = pyg.font.SysFont("Berlin Sans FB", 100)
+   font = getFont(100)
    centerTextScreen(win, font, "Level Select", 20, r, g, b)
    closeButton(win, [r, g, b])
    backButton(win, [r, g, b])
-   font = pyg.font.SysFont("Berlin Sans FB", 30)
+   font = getFont(30)
    bg = pyg.Surface((600, 70))
    bg.set_alpha(175)
    bg.fill((r1, g1, b1))
@@ -995,9 +1005,9 @@ def levelSelect(win, account):
       centerTextScreen(win, font, "Default Levels", 150, r, g, b)
       centerTextScreen(win, font, "Level " + str(level) + ": " + levelProperties["Name"][level], 190, r, g, b)
       if userLvNum != 0:
-         font = pyg.font.SysFont("Berlin Sans FB", 23)
+         font = getFont(23)
          menuButton(win, font, halfScreen[0], screen[1] - 160, "View Your Levels", r, g, b, False, "GET_LEVELS_USERNAME")
-         font = pyg.font.SysFont("Berlin Sans FB", 30)
+         font = getFont(30)
          if key["Up"] or key["Down"]:
             playSound(sounds[0])
             pyg.time.wait(200)
@@ -1023,13 +1033,13 @@ def levelSelect(win, account):
    else:
       centerTextScreen(win, font, account + "'s Levels", 150, r, g, b)
       centerTextScreen(win, font, levelProperties["Name"][level], 190, r, g, b)
-      font = pyg.font.SysFont("Berlin Sans FB", 23)
+      font = getFont(23)
       menuButton(win, font, halfScreen[0], screen[1] - 160, "View Default Levels", r, g, b, False, "GET_LEVELS_DEFAULT")
       if key["Up"] or key["Down"]:
          playSound(sounds[0])
          pyg.time.wait(200)
          mode = "GET_LEVELS_DEFAULT"
-      font = pyg.font.SysFont("Berlin Sans FB", 30)
+      font = getFont(30)
       if key["Right"]:
          playSound(sounds[0])
          level += 1
@@ -1097,9 +1107,9 @@ def pauseMenu(win, cam, col):
    menu.fill((col[0], col[1], col[2]))
    win.blit(menu, (halfScreen[0] - 250, halfScreen[1] - 300))
    r1, g1, b1 = invertCol(col[0], col[1], col[2])
-   font = pyg.font.SysFont("Berlin Sans FB", 50)
+   font = getFont(50)
    centerTextScreen(win, font, "Game Paused", halfScreen[1] - 280, r1, g1, b1)
-   font = pyg.font.SysFont("Berlin Sans FB", 30)
+   font = getFont(30)
    menuButton(win, font, halfScreen[0], halfScreen[1] - 180, "Continue", r1, g1, b1, False,"UNPAUSE")
    menuButton(win, font, halfScreen[0], halfScreen[1] - 110, "Options", r1, g1, b1, False, "PAUSED_OPTIONS")
    menuButton(win, font, halfScreen[0], halfScreen[1] - 40, "Quit Game", r1, g1, b1, False,"MAIN_MENU", "MAIN_MENU")
@@ -1111,25 +1121,25 @@ def pauseMenu(win, cam, col):
 def finishedLevel(win, cam, position):
    global level, mode, menuMode, units
    drawLevel(win, level, cam, True)
-   font = pyg.font.SysFont("Berlin Sans FB", 50)
+   font = getFont(50)
    r, g, b = invertCol(levelProperties["Colour"][level][0], levelProperties["Colour"][level][1], levelProperties["Colour"][level][2])
-   font = pyg.font.SysFont("Berlin Sans FB", 100)
+   font = getFont(100)
    if position == "WIN":
       centerTextScreen(win, font, "YOU WON!", 20, r, g, b)
    else:
       centerTextScreen(win, font, "YOU LOST!", 20, r, g, b)
-   font = pyg.font.SysFont("Berlin Sans FB", 30)
+   font = getFont(30)
    menuButton(win, font, halfScreen[0], screen[1] - 100, "Continue", r, g, b, False,"MAIN_MENU", "MAIN_MENU")
    if key["Enter"]:
       playSound(sounds[1])
       pyg.mixer.Channel(2).stop()
       menuMode = "MAIN_MENU"
       mode = "MAIN_MENU"
-   font = pyg.font.SysFont("Berlin Sans FB", 40)
+   font = getFont(40)
    drawText(win, font, "SPEED: ", screen[0] - 250, 3, r, g, b)
    pyg.draw.rect(win, (0, 255, 0), (screen[0] - 108, 12, (abs(velocity) / carProperties["Speed"][car]) * 88, 28), 0)
    pyg.draw.rect(win, (r, g, b), (screen[0] - 110, 10, 90, 30), 2)
-   font = pyg.font.SysFont("Berlin Sans FB", 25)
+   font = getFont(25)
    if units == "METRIC":
       speed = str(round(abs(velocity * 25))) + " kph"
    else:
@@ -1149,7 +1159,7 @@ def playGame(win, cam, tm):
     else:
         showTime = False
         drawLevel(win, level, cam, False)
-    font = pyg.font.SysFont("Berlin Sans FB", 50)
+    font = getFont(50)
     if time["Second"] >= -3 and time["Second"] <= -2.5:
         playSound(sounds[4], loops=-1)
         drawText(win, font, "3", halfScreen[0], 50, r, g, b)
@@ -1167,7 +1177,7 @@ def playGame(win, cam, tm):
        pyg.mixer.Sound.stop(sounds[5])
     pausedVelocity = velocity
     carPos = [(halfScreen[0] - 20) - cam[0], -((halfScreen[1] + 20) - cam[1])]
-    font = pyg.font.SysFont("Berlin Sans FB", 40)
+    font = getFont(40)
     if showTime:
        drawText(win, font, "Elapsed Time: " + str(time["Minute"]) + ":" + str(round(time["Second"], 2)), 5, 5, r, g, b)
     if key["Enter"] or key["Escape"]:
@@ -1185,7 +1195,7 @@ def playGame(win, cam, tm):
     drawText(win, font, "Y: " + str(round(carPos[1])), 5, screen[1] - 40, r, g, b)
     pyg.draw.rect(win, (0, 255, 0), (screen[0] - 108, 12, (abs(velocity) / carProperties["Speed"][car]) * 88, 28), 0)
     pyg.draw.rect(win, (r, g, b), (screen[0] - 110, 10, 90, 30), 2)
-    font = pyg.font.SysFont("Berlin Sans FB", 25)
+    font = getFont(25)
     if units == "METRIC":
       speed = str(round(abs(velocity * 25))) + " kph"
     else:
@@ -1227,7 +1237,7 @@ def closeButton(win, col):
     r, g, b = invertCol(col[0], col[1], col[2])
     btn = pyg.Surface((100, 75))
     btn.set_alpha(150)
-    fnt = pyg.font.SysFont("Berlin Sans FB", 50)
+    fnt = getFont(50)
     if mousePos[0] > x - 100 and mousePos[0] < x + 100 and mousePos[1] > y and mousePos[1] < y + 50:
         btn.fill((r, g, b))
         r1, g1, b1 = col[0], col[1], col[2]
@@ -1448,7 +1458,7 @@ def gameOptions(win, frame, mde):
       offset = 1
    else:
       offset = 2
-   Label(frame, text="Game Options", font=("Berlin Sans FB", 30)).grid(row=0, column=0, columnspan=3)
+   Label(frame, text="Game Options", font=getFont(30, for_tk=True)).grid(row=0, column=0, columnspan=3)
    Label(frame, text="Game Units:").grid(row=1, column=0)
    radioFrame = Frame(frame)
    radioFrame.grid(row=1, column=offset, columnspan=2)
@@ -1608,7 +1618,7 @@ def deleteCreation(win, name, typ):
 
 def editCarProperties(win, frame):
    global carCreatorProperties, editCarCreator
-   Label(frame, text="Car Properties", font=("Berlin Sans FB", 30)).grid(row=0)
+   Label(frame, text="Car Properties", font=getFont(30, for_tk=True)).grid(row=0)
    optionsFrame = Frame(frame)
    optionsFrame.grid(row=1)
    Label(optionsFrame, text="Car Name:").grid(row=0, column=0)
@@ -1957,7 +1967,7 @@ def createAccount(uname, pword=""):
 
 def editLevelProperties(win, frame):
     global levelCreatorProperties
-    Label(frame, text="Advanced Properties", font=("Berlin Sans FB", 30)).grid(row=0, column=0, columnspan=2)
+    Label(frame, text="Advanced Properties", font=getFont(30, for_tk=True)).grid(row=0, column=0, columnspan=2)
     innerFrame = Frame(frame)
     innerFrame.grid(row=1, column=0, rowspan=1, columnspan=2, padx=5, pady=5)
     Label(innerFrame, text="Name:").grid(row=0, column=0)
@@ -2236,6 +2246,7 @@ randomGates = []
 
 pyg.mixer.init(48000, -16, 2, 4096)
 pyg.init()
+_font_cache = {}
 sounds, engines = getSounds()
 pyg.mixer.Channel(0).set_volume(volume["Sound"] / 100)
 pyg.mixer.Channel(1).set_volume(volume["Engine"] / 100)
