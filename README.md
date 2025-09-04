@@ -1,0 +1,6 @@
+- To play the game, you must be running Windows 7 or above.
+- The system requirements are 4GB RAM or higher and a processor with 1.6 GHz or higher
+- After opening the link, download all files
+- Before launching the game, make sure that the "Sound", "TrackPieces" and "UserData" folders are in the same directory as the game.
+- Do not launch the game whilst any other game files and folders are open
+- A resolution of 1920x1080 is recommended for smooth gameplay. Other resolutions will work, but the gameplay will not be smooth.
