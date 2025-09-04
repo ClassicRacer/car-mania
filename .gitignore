@@ -1,0 +1,32 @@
+# OS-specific
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+*.exe
+
+# Logs
+*.log
+
+# UserData
+UserData/*
+!UserData/Default/
+!UserData/Default/**
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
