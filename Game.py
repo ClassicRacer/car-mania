@@ -10,13 +10,6 @@ from tkinter import messagebox, filedialog, colorchooser
 from PIL import Image
 from pygame.locals import*
 
-tk_root = Tk()
-tk_root.withdraw()  # Hide the main window
-
-file_path = filedialog.askopenfilename()
-tk_root.destroy()
-
-
 import pygame as pyg
 
 class createSprite(pyg.sprite.Sprite):
