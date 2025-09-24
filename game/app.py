@@ -1,7 +1,5 @@
-from . import _legacy_game
-
 def main():
-    _legacy_game.main()
+    from . import _legacy_game
 
 if __name__ == "__main__":
     main()

@@ -16,14 +16,18 @@ KM_PER_MILE = 1.609344
 SPEED_STEP = 0.05
 
 # Paths
-USER_DATA_DIR = "UserData/"
+USER_DATA_DIR = "UserData/" # TODO: Fix crash when changing the path name
 CARS_DIR = "/Cars/"
 LEVELS_DIR = "/Levels/"
 LEVEL_CODE_DIR = "/Levels/Code/"
 LEVEL_MUSIC_DIR = "/Levels/Music/"
 MUSIC_DIR = "Music/"
-ENGINE_SFX_DIR = "Sound/Engine/"
+ENGINE_SFX_DIR = "engine/"
 GUEST_USER = "UserData/Guest"
+
+# New paths
+
+ASSETS_DIR = "game/assets"
 
 # File extensions
 EXT_WAV = ".wav"
@@ -72,12 +76,6 @@ CMD_GET_LEVELS_DEFAULT = "GET_LEVELS_DEFAULT"
 CMD_GET_LEVELS_USERNAME = "GET_LEVELS_USERNAME"
 CMD_GET_CARS_DEFAULT = "GET_CARS_DEFAULT"
 CMD_GET_CARS_USERNAME = "GET_CARS_USERNAME"
-
-# Tags
-TAG_COLLIDE = "COLLIDE"
-TAG_ROAD = "ROAD"
-TAG_ITEM = "ITEM"
-TAG_INSTRUCTIONS = "INSTRUCTIONS"
 
 # Input / controls
 KEY_W = "W"

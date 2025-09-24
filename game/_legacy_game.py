@@ -1,4 +1,3 @@
-
 import os, ctypes, shutil, pickle
 import tkinter.font as tkFont
 from csv import reader
@@ -11,6 +10,7 @@ from PIL import Image
 from pygame.locals import*
 
 from game.config.constants import *
+from game.io.assets import load_image, load_sound, load_font
 
 import pygame as pyg
 
@@ -29,21 +29,18 @@ class createSprite(pyg.sprite.Sprite):
 def getPcs():
    files = ["road.png", "turn.png","checkpoint.png", "checkpoint_active.png", "maze_grid.png", "maze_wall.png", "tree1.png", "tree2.png", "tree3.png"]
    pcs = [""]
-   location = "TrackPieces/"
    for name in files:
-      image = pyg.image.load(location + name)
+      image = load_image(name)
       pcs.append(image)
    return pcs
 
 def getSounds():
    files = ["select1.wav", "select2.wav", "gate.wav", "win.wav", "countdown.wav", "go.wav", "crash1.wav", "crash2.wav", "crash3.wav", "crash4.wav", "crash5.wav", "skid1.wav", "skid2.wav", "skid3.wav", "skid4.wav"]
    snd = []
-   location = "Sound/"
    for name in files:
-      sound = pyg.mixer.Sound(location + name)
+      sound = load_sound(name)
       snd.append(sound)
    eng = []
-   location = ENGINE_SFX_DIR
    for engNum in range(23):
       eng.append([])
       if engNum in [0, 2, 3, 11, 12, 16]:
@@ -65,7 +62,7 @@ def getSounds():
       else:
          soundNum = 0
       for engPitch in range(soundNum):
-         sound = pyg.mixer.Sound(location + str(engNum) + "-" + str(engPitch) + EXT_WAV)
+         sound = load_sound(ENGINE_SFX_DIR + str(engNum) + "-" + str(engPitch) + EXT_WAV)
          eng[engNum].append(sound)
    return snd, eng
 
@@ -82,7 +79,7 @@ def getFont(size, for_tk=False):
         if for_tk:
             _font_cache[key] = tkFont.Font(family="Arial", size=size)
         else:
-            _font_cache[key] = pyg.font.Font("assets/font.ttf", size)
+            _font_cache[key] = load_font("font.ttf", size)
     return _font_cache[key]
 
 def mainMenu(win, level, cam):
@@ -92,17 +89,17 @@ def mainMenu(win, level, cam):
    r, g, b = invertCol(levelProperties["Colour"][level][0], levelProperties["Colour"][level][1], levelProperties["Colour"][level][2])
    r1, g1, b1 = invertCol(r, g, b)
    closeButton(win, [r, g, b])
-   if menuMode not in ["TITLE_SCREEN", "MAIN_MENU"]:
+   if menuMode not in [STATE_TITLE, STATE_MAIN_MENU]:
       backButton(win, [r, g, b])
-   if menuMode == "TITLE_SCREEN":
+   if menuMode == STATE_TITLE:
       font = getFont(100)
       centerTextScreen(win, font, "Car Mania", 20, r, g, b)
       font = getFont(30)
-      menuButton(win, font, halfScreen[0], screen[1] - 340, "Login", r, g, b, True,"LOGIN_PAGE")
+      menuButton(win, font, halfScreen[0], screen[1] - 340, "Login", r, g, b, True,STATE_LOGIN_PAGE)
       menuButton(win, font, halfScreen[0], screen[1] - 270, "Play as Guest", r, g, b, False,"GUEST_ACCOUNT")
       menuButton(win, font, halfScreen[0], screen[1] - 200, "Instructions", r, g, b, True,"INSTRUCTIONS")
-      menuButton(win, font, halfScreen[0], screen[1] - 130, "Credits", r, g, b, True,"CREDITS")
-   elif menuMode == "LOGIN_PAGE":
+      menuButton(win, font, halfScreen[0], screen[1] - 130, "Credits", r, g, b, True,STATE_CREDITS)
+   elif menuMode == STATE_LOGIN_PAGE:
       font = getFont(100)
       centerTextScreen(win, font, "Login", 20, r, g, b)
       font = getFont(30)
@@ -131,14 +128,14 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "To win a level, you must focus on staying on the road and pass all checkpoints in the level.", 290, r, g, b)
       centerTextScreen(win, font, "Do not miss a checkpoint otherwise you cannot complete a lap.", 320, r, g, b)
       centerTextScreen(win, font, "The game encourages you to express your creativity by creating cars and levels.", 350, r, g, b)
-      centerTextScreen(win, font, "The controls of the gameplay are similar to those of a traditional car racing game:", 410, r, g, b)
-      centerTextScreen(win, font, "Use the arrow keys or WASD to move your car around.", 440, r, g, b)
-      centerTextScreen(win, font, "Use the SPACE key to apply the brakes and slow your car down.", 470, r, g, b)
-      centerTextScreen(win, font, "Use the ENTER key to pause the game.", 500, r, g, b)
+      centerTextScreen(win, font, "Controls:", 410, r, g, b)
+      centerTextScreen(win, font, "Use the arrow keys or [W], [A], [S], [D] to move your car around.", 440, r, g, b)
+      centerTextScreen(win, font, "Use [SPACE] to apply the brakes and slow your car down.", 470, r, g, b)
+      centerTextScreen(win, font, "Use [ENTER] to pause the game.", 500, r, g, b)
       centerTextScreen(win, font, "You can drive in the main menu to practice these skills.", 560, r, g, b)
       centerTextScreen(win, font, "Good luck!", 590, r, g, b)
-      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"TITLE_SCREEN")
-   elif menuMode == "CREDITS":
+      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True, STATE_TITLE)
+   elif menuMode == STATE_CREDITS:
       font = getFont(100)
       centerTextScreen(win, font, "Credits", 20, r, g, b)
       font = getFont(30)
@@ -152,8 +149,8 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "Car drawings done by Anjelee Menon and Taro Bamps", 320, r, g, b)
       centerTextScreen(win, font, "Soundtrack obtained from ModArchive.org", 380, r, g, b)
       centerTextScreen(win, font, "Sound effects and engine sounds are obtained from \"The Vehicular Epic\"", 410, r, g, b)
-      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"TITLE_SCREEN")
-   elif menuMode == "MAIN_MENU":
+      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True, STATE_TITLE)
+   elif menuMode == STATE_MAIN_MENU:
       bg = pyg.Surface((1000, 90))
       bg.set_alpha(175)
       bg.fill((r1, g1, b1))
@@ -163,17 +160,17 @@ def mainMenu(win, level, cam):
       font = getFont(30)
       centerTextScreen(win, font, "Welcome " + username + "!", 150, r, g, b)
       centerTextScreen(win, font, "Note: You can either play with the default set of cars/levels or create your own!", 190, r, g, b)
-      menuButton(win, font, halfScreen[0], screen[1] - 410, "Play Game", r, g, b, False,"GET_CARS_DEFAULT")
-      menuButton(win, font, halfScreen[0], screen[1] - 340, "Car Creator", r, g, b, True,"CAR_CREATOR_MENU")
-      menuButton(win, font, halfScreen[0], screen[1] - 270, "Level Creator", r, g, b, True,"LEVEL_CREATOR_MENU")
-      menuButton(win, font, halfScreen[0], screen[1] - 200, "Options", r, g, b, False,"MENU_OPTIONS")
-      menuButton(win, font, halfScreen[0], screen[1] - 130, "Sign Out", r, g, b, True,"TITLE_SCREEN")
-   elif menuMode == "CAR_CREATOR_MENU":
+      menuButton(win, font, halfScreen[0], screen[1] - 410, "Play Game", r, g, b, False,CMD_GET_CARS_DEFAULT)
+      menuButton(win, font, halfScreen[0], screen[1] - 340, "Car Creator", r, g, b, True,STATE_CAR_CREATOR_MENU)
+      menuButton(win, font, halfScreen[0], screen[1] - 270, "Level Creator", r, g, b, True,STATE_LEVEL_CREATOR_MENU)
+      menuButton(win, font, halfScreen[0], screen[1] - 200, "Options", r, g, b, False,STATE_MENU_OPTIONS)
+      menuButton(win, font, halfScreen[0], screen[1] - 130, "Sign Out", r, g, b, True,STATE_TITLE)
+   elif menuMode == STATE_CAR_CREATOR_MENU:
       font = getFont(100)
       centerTextScreen(win, font, "Car Creator Menu", 20, r, g, b)
       font = getFont(30)
       menuButton(win, font, halfScreen[0], screen[1] - 270, "Create Car", r, g, b, False,"CREATE_CAR_DIRECTORY")
-      menuButton(win, font, halfScreen[0], screen[1] - 200, "Edit Car", r, g, b, False,"EDIT_CAR")
+      menuButton(win, font, halfScreen[0], screen[1] - 200, "Edit Car", r, g, b, False,CMD_EDIT_CAR)
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Instructions", r, g, b, True,"CAR_CREATOR_INSTRUCTIONS")
    elif menuMode == "CAR_CREATOR_INSTRUCTIONS":
       font = getFont(100)
@@ -185,18 +182,17 @@ def mainMenu(win, level, cam):
       win.blit(bg, (0, 200))
       centerTextScreen(win, font, "The car creator has two sections:", 200, r, g, b)
       centerTextScreen(win, font, "The first section will ask you to import a car image.", 230, r, g, b)
-      centerTextScreen(win, font, "Keep in mind to have an aerial image of a car facing north (preferably with resolution 190x350) in JPEG or PNG format.", 260, r, g, b)
+      centerTextScreen(win, font, "Make sure to have an aerial image of a car facing north (preferably with resolution 190x350) in JPEG or PNG format.", 260, r, g, b)
       centerTextScreen(win, font, "The second section will let you set the car's name & performance.", 320, r, g, b)
       centerTextScreen(win, font, "This consists of Top Speed, Acceleration, Handling and Offroad.", 350, r, g, b)
       centerTextScreen(win, font, "You can also set the engine type of the car and test how the car will sound.", 380, r, g, b)
-      centerTextScreen(win, font, "Good luck creating cars!", 440, r, g, b)
-      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"CAR_CREATOR_MENU")
-   elif menuMode == "LEVEL_CREATOR_MENU":
+      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,STATE_CAR_CREATOR_MENU)
+   elif menuMode == STATE_LEVEL_CREATOR_MENU:
       font = getFont(100)
       centerTextScreen(win, font, "Level Creator Menu", 20, r, g, b)
       font = getFont(30)
       menuButton(win, font, halfScreen[0], screen[1] - 270, "Create Level", r, g, b, False,"LEVEL_CREATOR_RESET")
-      menuButton(win, font, halfScreen[0], screen[1] - 200, "Edit Level", r, g, b, False,"EDIT_LEVEL")
+      menuButton(win, font, halfScreen[0], screen[1] - 200, "Edit Level", r, g, b, False,CMD_EDIT_LEVEL)
       menuButton(win, font, halfScreen[0], screen[1] - 130, "Instructions", r, g, b, True,"LEVEL_CREATOR_INSTRUCTIONS")
    elif menuMode == "LEVEL_CREATOR_INSTRUCTIONS":
       font = getFont(100)
@@ -219,8 +215,7 @@ def mainMenu(win, level, cam):
       centerTextScreen(win, font, "You can optionally set music to play in the background of a level.", 530, r, g, b)
       centerTextScreen(win, font, "If you are using this option, make sure to have a music file in WAV format preferably with 48000 Hz as the frequency.", 560, r, g, b)
       centerTextScreen(win, font, "For this to work, the WAV file must be 16-bit or lower.", 590, r, g, b)
-      centerTextScreen(win, font, "Good luck creating levels!", 650, r, g, b)
-      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,"LEVEL_CREATOR_MENU")
+      menuButton(win, font, halfScreen[0], screen[1] - 130, "Done", r, g, b, True,STATE_LEVEL_CREATOR_MENU)
 
 def carCreator(win):
    global levelProperties, carCreatorProperties, angle
@@ -305,7 +300,7 @@ def importImage(location=""):
             messagebox.showerror("Error importing image", "The name of the file interferes with the game\nPlease rename the file")
             closeTk(fakeWin)
             return None
-      return pyg.image.load(location)
+      return load_image(location)
    else:
       return carCreatorProperties["Image"]
 
@@ -406,14 +401,14 @@ def levelCreator(win, cam):
          levelCreatorProperties["Undo"].append(removedCode)
          if removedCode[0] == "gate":
             activeGate = int(removedCode[1])
-      menuMode = "LEVEL_CREATOR_MENU"
+      menuMode = STATE_LEVEL_CREATOR_MENU
    elif menuMode == "REDO_PIECE":
       if len(levelCreatorProperties["Undo"]) != 0:
          addedCode = levelCreatorProperties["Undo"].pop(len(levelCreatorProperties["Undo"]) - 1)
          levelCreatorProperties["Code"].append(addedCode)
          if addedCode[0] == "gate":
             activeGate = int(addedCode[1]) + 1
-      menuMode = "LEVEL_CREATOR_MENU"
+      menuMode = STATE_LEVEL_CREATOR_MENU
    if levelCreatorProperties["Type"] == 1:
       centerTextPanel(win, font, "Road", screen[0]//10, 130, r2, g2, b2)
    elif levelCreatorProperties["Type"] == 2:
@@ -423,7 +418,7 @@ def levelCreator(win, cam):
    elif levelCreatorProperties["Type"] in [7, 8, 9]:
       centerTextPanel(win, font, "Tree", screen[0]//10, 130, r2, g2, b2)
    arrowButton(win, [r1, g1, b1], [r2, g2, b2], 30, 520, "BACK")
-   arrowButton(win, [r1, g1, b1], [r2, g2, b2], 310, 520, "NEXT")
+   arrowButton(win, [r1, g1, b1], [r2, g2, b2], 310, 520, CMD_NEXT)
    centerTextPanel(win, font, "Type", screen[0]//10, 530, r2, g2, b2)
    if levelCreatorProperties["Type"] not in [7, 8, 9]:
       arrowButton(win, [r1, g1, b1], [r2, g2, b2], 30, 590, "ACW")
@@ -432,7 +427,7 @@ def levelCreator(win, cam):
    font = getFont(20)
    menuButton(win, font, screen[0]//10, 670, "Undo", r2, g2, b2, True,"UNDO_PIECE")
    menuButton(win, font, screen[0]//10, 740, "Redo", r2, g2, b2, True,"REDO_PIECE")
-   menuButton(win, font, screen[0]//10, 810, "Advanced Properties", r2, g2, b2, False,"LEVEL_OPTIONS")
+   menuButton(win, font, screen[0]//10, 810, "Advanced Properties", r2, g2, b2, False,STATE_LEVEL_OPTIONS)
    centerTextPanel(win, font, "Use the arrow keys to move around", screen[0]//10, screen[1] - 170, r2, g2, b2)
    centerTextPanel(win, font, "Select/Deselect a piece by clicking", screen[0]//10, screen[1] - 130, r2, g2, b2)
    centerTextPanel(win, font, "on the piece in the top left corner", screen[0]//10, screen[1] - 110, r2, g2, b2)
@@ -444,13 +439,13 @@ def levelCreator(win, cam):
    closeButton(win, [r2, g2, b2])
    backButton(win, [r2, g2, b2])
    ##
-   if key["Left"] or key["A"]:
+   if key[DIR_LEFT] or key[KEY_A]:
       camera[0] += 10
-   if key["Right"] or key["D"]:
+   if key[DIR_RIGHT] or key[KEY_D]:
       camera[0] -= 10
-   if key["Up"] or key["W"]:
+   if key[DIR_UP] or key[KEY_W]:
       camera[1] += 10
-   if key["Down"] or key["S"]:
+   if key[DIR_DOWN] or key[KEY_S]:
       camera[1] -= 10
 
 def rebuildMaze():
@@ -668,36 +663,36 @@ def drawLevel(win, level, cam, move):
    handling = carProperties["Handling"][car]
    if move:
      playEngineSound(carProperties["Engine"][car], abs(velocity))
-     if key["Up"] or key["W"]:
+     if key[DIR_UP] or key[KEY_W]:
          velocity += altered_acceleration / 100
      else:
          if velocity > 0:
              velocity -= 5 / 1000
-     if key["Down"] or key["S"]:
+     if key[DIR_DOWN] or key[KEY_S]:
          velocity -= altered_acceleration / 100
      else:
          if velocity < 0:
              velocity += altered_acceleration / 1000
      if velocity > 2.5 or velocity < -2.5:
-         if key["Left"] or key["A"]:
+         if key[DIR_LEFT] or key[KEY_A]:
              playSound(sounds[randint(11, 14)], channel=4)
              angle -= handling / velocity
-         if key["Right"] or key["D"]:
+         if key[DIR_RIGHT] or key[KEY_D]:
              playSound(sounds[randint(11, 14)], channel=4)
              angle += handling / velocity
      elif velocity > SPEED_STEP or velocity < -SPEED_STEP:
         if velocity > SPEED_STEP:
-           if key["Left"] or key["A"]:
+           if key[DIR_LEFT] or key[KEY_A]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle -= handling / 5
-           if key["Right"] or key["D"]:
+           if key[DIR_RIGHT] or key[KEY_D]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle += handling / 5
         elif velocity < -SPEED_STEP:
-           if key["Left"] or key["A"]:
+           if key[DIR_LEFT] or key[KEY_A]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle += handling / 5
-           if key["Right"] or key["D"]:
+           if key[DIR_RIGHT] or key[KEY_D]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle -= handling / 5
      if key["Space"]:
@@ -730,7 +725,7 @@ def playEngineSound(typ, speed):
    carGears = carProperties["Speed"][car] / len(engines[typ])
    if 0.1 <= speed <= 0.2:
       pyg.mixer.Channel(1).play(engines[typ][0], loops=-1)
-   if ((key["Up"] or key["W"]) and velocity > 0) or ((key["Down"] or key["S"]) and velocity < 0):
+   if ((key[DIR_UP] or key[KEY_W]) and velocity > 0) or ((key[DIR_DOWN] or key[KEY_S]) and velocity < 0):
       for i in range(1, len(engines[typ])):
          if carGears * i <= speed <= carGears * i + 0.1:
             pyg.mixer.Channel(1).play(engines[typ][i], loops=-1)
@@ -748,7 +743,7 @@ def getLevels(account, mde, load=False):
       properties = {"Name" : [""], "Colour" : [[0 for i in range(3)] for j in range(lvNum + 1)], "Code" : [[[""]] for i in range(lvNum + 1)], "Music" : [], "Laps" : [0], "Gates" : [0] * (lvNum + 1)}
       for lv in range(1, lvNum + 1):
          try:
-            music = pyg.mixer.Sound(location + MUSIC_DIR + str(lv) + EXT_WAV)
+            music = load_sound(location + MUSIC_DIR + str(lv) + EXT_WAV)
          except:
             music = None
          properties["Music"].append(music)
@@ -788,7 +783,7 @@ def getLevels(account, mde, load=False):
                   if line[0] == "gate":
                      properties["Gates"][level] += 1
          try:
-            music = pyg.mixer.Sound(location + MUSIC_DIR + properties["Name"][lv + 1] + EXT_WAV)
+            music = load_sound(location + MUSIC_DIR + properties["Name"][lv + 1] + EXT_WAV)
          except:
             music = None
          properties["Music"].append(music)
@@ -849,7 +844,7 @@ def getCars(account, mde, vehicle, load=False):
    location = USER_DATA_DIR + account + CARS_DIR
    folder = getFolderItems(location)
    if folder == ['']:
-      location = "UserData/Default/Cars/"
+      location = USER_DATA_DIR + "Default/Cars/"
    for data in range(1, len(folder)):
       if account == "Default":
          name = folder[data].replace(str(data) + " - ", "")
@@ -867,7 +862,7 @@ def getCars(account, mde, vehicle, load=False):
       extension = EXT_JPG
       if os.path.exists(location + "/" + folder[data] + "/car" + EXT_PNG):
          extension = EXT_PNG
-      image = pyg.image.load(location + "/" + folder[data] + "/car" + extension)
+      image = load_image(location + "/" + folder[data] + "/car" + extension)
       properties["Image"].append(image)
       carData.close()
    if load == False:
@@ -905,23 +900,23 @@ def carSelect(win, account):
       location = USER_DATA_DIR + username + CARS_DIR
       folder = getFolderItems(location)
       if folder != ['']:
-         menuButton(win, font, halfScreen[0], screen[1] - 160, "View Your Cars", r, g, b, False, "GET_CARS_USERNAME")
-         if (key["Up"] or key["W"]) or (key["Down"] or key["S"]):
+         menuButton(win, font, halfScreen[0], screen[1] - 160, "View Your Cars", r, g, b, False, CMD_GET_CARS_USERNAME)
+         if (key[DIR_UP] or key[KEY_W]) or (key[DIR_DOWN] or key[KEY_S]):
             playSound(sounds[0])
             pyg.time.wait(200)
-            mode = "GET_CARS_USERNAME"
+            mode = CMD_GET_CARS_USERNAME
       else:
          centerTextScreen(win, font, "You can also play by creating a car", screen[1] - 50, r, g, b)
    else:
       centerTextScreen(win, font, account + "'s Cars", 150, r, g, b)
       font = getFont(25)
-      menuButton(win, font, halfScreen[0], screen[1] - 160, "View Default Cars", r, g, b, False, "GET_CARS_DEFAULT")
-      if (key["Up"] or key["W"]) or (key["Down"] or key["S"]):
+      menuButton(win, font, halfScreen[0], screen[1] - 160, "View Default Cars", r, g, b, False, CMD_GET_CARS_DEFAULT)
+      if (key[DIR_UP] or key[KEY_W]) or (key[DIR_DOWN] or key[KEY_S]):
          playSound(sounds[0])
          pyg.time.wait(200)
-         mode = "GET_CARS_DEFAULT"
+         mode = CMD_GET_CARS_DEFAULT
       font = getFont(30)
-   menuButton(win, font, halfScreen[0], screen[1] - 230, "Continue", r, g, b, False, "GET_LEVELS_DEFAULT")
+   menuButton(win, font, halfScreen[0], screen[1] - 230, "Continue", r, g, b, False, CMD_GET_LEVELS_DEFAULT)
    centerTextScreen(win, font, carProperties["Name"][car], 190, r, g, b)
    font = getFont(20)
    size = 600
@@ -945,13 +940,13 @@ def carSelect(win, account):
    pyg.draw.rect(win, (150, 150, 150), (x + 2, y + (gap * 3) + 2, (carProperties["Offroad"][car] / 5) * size, 18), 0)
    pyg.draw.rect(win, (r, g, b), (x, y + (gap * 3), size + 2, 20), 2)
    centerTextScreen(win, font, "Offroad: " + str(carProperties["Offroad"][car]) + " units", y + (gap * 3) - textY, r, g, b)
-   if key["Right"] or key["D"]:
+   if key[DIR_RIGHT] or key[KEY_D]:
       playSound(sounds[0])
       car += 1
       if car == len(carProperties["Name"]):
          car = 0
       pyg.time.wait(200)
-   if key["Left"] or key["A"]:
+   if key[DIR_LEFT] or key[KEY_A]:
       playSound(sounds[0])
       car -= 1
       if car == -1:
@@ -960,7 +955,7 @@ def carSelect(win, account):
    if key["Enter"]:
       playSound(sounds[1])
       pyg.time.wait(200)
-      mode = "GET_LEVELS_DEFAULT"
+      mode = CMD_GET_LEVELS_DEFAULT
 
 def playSound(sound, channel=0, loops=0):
    if channel == 0:
@@ -994,32 +989,32 @@ def levelSelect(win, account):
    centerTextScreen(win, font, "Use the LEFT or RIGHT key to change the level", screen[1] - 80, r, g, b)
    location = USER_DATA_DIR + username + LEVEL_CODE_DIR
    userLvNum = getLvNum(location)
-   location = "UserData/Default/Levels/Code/"
+   location = USER_DATA_DIR + "Default/Levels/Code/"
    defaultLvNum = getLvNum(location)
    if account == "Default":
       centerTextScreen(win, font, "Default Levels", 150, r, g, b)
       centerTextScreen(win, font, "Level " + str(level) + ": " + levelProperties["Name"][level], 190, r, g, b)
       if userLvNum != 0:
          font = getFont(23)
-         menuButton(win, font, halfScreen[0], screen[1] - 160, "View Your Levels", r, g, b, False, "GET_LEVELS_USERNAME")
+         menuButton(win, font, halfScreen[0], screen[1] - 160, "View Your Levels", r, g, b, False, CMD_GET_LEVELS_USERNAME)
          font = getFont(30)
-         if key["Up"] or key["Down"]:
+         if key[DIR_UP] or key[DIR_DOWN]:
             playSound(sounds[0])
             pyg.time.wait(200)
-            mode = "GET_LEVELS_USERNAME"
+            mode = CMD_GET_LEVELS_USERNAME
       else:
          bg = pyg.Surface((600, 35))
          bg.set_alpha(175)
          bg.fill((r1, g1, b1))
          win.blit(bg, (halfScreen[0] - 300, screen[1] - 40))
          centerTextScreen(win, font, "You can also play by creating a level", screen[1] - 50, r, g, b)
-      if key["Right"]:
+      if key[DIR_RIGHT]:
          playSound(sounds[0])
          level += 1
          if level == defaultLvNum + 1:
             level = 1
          pyg.time.wait(200)
-      if key["Left"]:
+      if key[DIR_LEFT]:
          playSound(sounds[0])
          level -= 1
          if level == 0:
@@ -1029,41 +1024,41 @@ def levelSelect(win, account):
       centerTextScreen(win, font, account + "'s Levels", 150, r, g, b)
       centerTextScreen(win, font, levelProperties["Name"][level], 190, r, g, b)
       font = getFont(23)
-      menuButton(win, font, halfScreen[0], screen[1] - 160, "View Default Levels", r, g, b, False, "GET_LEVELS_DEFAULT")
-      if key["Up"] or key["Down"]:
+      menuButton(win, font, halfScreen[0], screen[1] - 160, "View Default Levels", r, g, b, False, CMD_GET_LEVELS_DEFAULT)
+      if key[DIR_UP] or key[DIR_DOWN]:
          playSound(sounds[0])
          pyg.time.wait(200)
-         mode = "GET_LEVELS_DEFAULT"
+         mode = CMD_GET_LEVELS_DEFAULT
       font = getFont(30)
-      if key["Right"]:
+      if key[DIR_RIGHT]:
          playSound(sounds[0])
          level += 1
          if level == userLvNum + 1:
             level = 1
          pyg.time.wait(200)
-      if key["Left"]:
+      if key[DIR_LEFT]:
          playSound(sounds[0])
          level -= 1
          if level == 0:
             level = userLvNum
          pyg.time.wait(200)
-   menuButton(win, font, halfScreen[0], screen[1] - 230, "Continue", r, g, b, False, "RESET_TIMER")
+   menuButton(win, font, halfScreen[0], screen[1] - 230, "Continue", r, g, b, False, CMD_RESET_TIMER)
    if level != 5:
       speed = 10
    else:
       speed = 50
-   if key["D"]:
+   if key[KEY_D]:
       camera[0] -= speed
-   if key["A"]:
+   if key[KEY_A]:
       camera[0] += speed
-   if key["S"]:
+   if key[KEY_S]:
       camera[1] -= speed
-   if key["W"]:
+   if key[KEY_W]:
       camera[1] += speed
    if key["Enter"]:
       playSound(sounds[1])
       pyg.time.wait(200)
-      mode = "RESET_TIMER"
+      mode = CMD_RESET_TIMER
 
 def resetLevel(lv):
    global camera, currentLap, time, velocity, angle, activeGate, gatesCleared, enginePitch
@@ -1081,14 +1076,14 @@ def resetLevel(lv):
 
 def resetCreator(creator):
    global camera, carCreatorProperties, activeGate, angle, levelCreatorProperties, levelProperties, level
-   if creator in ["LEVEL_CREATOR", "GET_LEVEL_CREATION"]:
+   if creator in [STATE_LEVEL_CREATOR, "GET_LEVEL_CREATION"]:
       camera = [(((screen[0] - (screen[0] // 5)) // 2) - 20), (halfScreen[1]) - 100]
-      if creator == "LEVEL_CREATOR":
+      if creator == STATE_LEVEL_CREATOR:
          levelCreatorProperties = {"Name" : "Unnamed Level", "Colour" : [levelProperties["Colour"][level][0], levelProperties["Colour"][level][1], levelProperties["Colour"][level][2]], "Angle" : 0, "Type" : 1, "Laps" : 1, "PieceSelected" : False, "Code" : [["" for i in range(10)]], "Undo" : []}
       else:
          levelCreatorProperties = {"Name" : levelCreatorProperties["Name"], "Colour" : [0, 0, 0], "Angle" : 0, "Type" : 1, "Laps" : 1, "PieceSelected" : False, "Code" : [["" for i in range(10)]], "Undo" : [], "ScaleFactor" : 1}            
       levelCreatorProperties["Code"][0] = ["road", 1, 0, 0, 0]
-   elif creator == "CAR_CREATOR":
+   elif creator == STATE_CAR_CREATOR:
       carCreatorProperties = {"Name" : "Unnamed Car", "Image" : None, "TopSpeed" : 1, "Acceleration" : 1, "Handling" : 1, "Offroad" : 1, "EngineType" : 0}
    activeGate = 0
    angle = 0
@@ -1105,13 +1100,13 @@ def pauseMenu(win, cam, col):
    font = getFont(50)
    centerTextScreen(win, font, "Game Paused", halfScreen[1] - 280, r1, g1, b1)
    font = getFont(30)
-   menuButton(win, font, halfScreen[0], halfScreen[1] - 180, "Continue", r1, g1, b1, False,"UNPAUSE")
-   menuButton(win, font, halfScreen[0], halfScreen[1] - 110, "Options", r1, g1, b1, False, "PAUSED_OPTIONS")
-   menuButton(win, font, halfScreen[0], halfScreen[1] - 40, "Quit Game", r1, g1, b1, False,"MAIN_MENU", "MAIN_MENU")
+   menuButton(win, font, halfScreen[0], halfScreen[1] - 180, "Continue", r1, g1, b1, False,CMD_UNPAUSE)
+   menuButton(win, font, halfScreen[0], halfScreen[1] - 110, "Options", r1, g1, b1, False, STATE_PAUSED_OPTIONS)
+   menuButton(win, font, halfScreen[0], halfScreen[1] - 40, "Quit Game", r1, g1, b1, False,STATE_MAIN_MENU, STATE_MAIN_MENU)
    if key["Enter"] or key["Escape"]:
       playSound(sounds[1])
       pyg.time.wait(200)
-      mode = "UNPAUSE"
+      mode = CMD_UNPAUSE
 
 def finishedLevel(win, cam, position):
    global level, mode, menuMode, units
@@ -1124,12 +1119,12 @@ def finishedLevel(win, cam, position):
    else:
       centerTextScreen(win, font, "YOU LOST!", 20, r, g, b)
    font = getFont(30)
-   menuButton(win, font, halfScreen[0], screen[1] - 100, "Continue", r, g, b, False,"MAIN_MENU", "MAIN_MENU")
+   menuButton(win, font, halfScreen[0], screen[1] - 100, "Continue", r, g, b, False,STATE_MAIN_MENU, STATE_MAIN_MENU)
    if key["Enter"]:
       playSound(sounds[1])
       pyg.mixer.Channel(2).stop()
-      menuMode = "MAIN_MENU"
-      mode = "MAIN_MENU"
+      menuMode = STATE_MAIN_MENU
+      mode = STATE_MAIN_MENU
    font = getFont(40)
    drawText(win, font, "SPEED: ", screen[0] - 250, 3, r, g, b)
    pyg.draw.rect(win, (0, 255, 0), (screen[0] - 108, 12, (abs(velocity) / carProperties["Speed"][car]) * 88, 28), 0)
@@ -1180,7 +1175,7 @@ def playGame(win, cam, tm):
        pyg.mixer.Sound.stop(sounds[5])
        playSound(sounds[1])
        pyg.time.wait(200)
-       mode = "PAUSED"
+       mode = STATE_PAUSED
     if currentLap >= int(levelProperties["Laps"][level]) + 1:
        mode = "WIN"
     drawText(win, font, "Lap: " + str(currentLap) + "/" + str(levelProperties["Laps"][level]), 5, 45, r, g, b)
@@ -1238,17 +1233,17 @@ def closeButton(win, col):
         r1, g1, b1 = col[0], col[1], col[2]
         if clicked[0] == 1 and mouseDown:
             playSound(sounds[1])
-            if mode == "CAR_CREATOR":
+            if mode == STATE_CAR_CREATOR:
                discardCar(0)
-            elif mode == "LEVEL_CREATOR":
+            elif mode == STATE_LEVEL_CREATOR:
                fakeWin = Tk()
                fakeWin.withdraw()
                quitCreator = messagebox.askyesnocancel("Quit Level Creator", "Are you sure that you want to quit the level creator and the entire game?\nUnsaved changes will be lost")
                closeTk(fakeWin)
                if quitCreator:
-                  mode = "QUIT"
+                  mode = CMD_QUIT
             else:
-               mode = "QUIT"
+               mode = CMD_QUIT
     else:
        btn.fill((col[0], col[1], col[2]))
        r1, g1, b1 = r, g, b
@@ -1276,31 +1271,31 @@ def backButton(win, col):
     centerTextPanel(win, arrowFont, "\u2190", x, y / 2, r1, g1, b1)
     if key["Escape"] or buttonPressed:
        playSound(sounds[1])
-       if mode == "MAIN_MENU":
-           if menuMode in ["LOGIN_PAGE", "INSTRUCTIONS"]:
-               menuMode = "TITLE_SCREEN"
-           elif menuMode in ["CAR_CREATOR_MENU", "LEVEL_CREATOR_MENU"]:
-              menuMode = "MAIN_MENU"
+       if mode == STATE_MAIN_MENU:
+           if menuMode in [STATE_LOGIN_PAGE, "INSTRUCTIONS"]:
+               menuMode = STATE_TITLE
+           elif menuMode in [STATE_CAR_CREATOR_MENU, STATE_LEVEL_CREATOR_MENU]:
+              menuMode = STATE_MAIN_MENU
            elif menuMode == "CAR_CREATOR_INSTRUCTIONS":
-              menuMode = "CAR_CREATOR_MENU"
+              menuMode = STATE_CAR_CREATOR_MENU
            elif menuMode == "LEVEL_CREATOR_INSTRUCTIONS":
-              menuMode = "LEVEL_CREATOR_MENU"
-           elif menuMode == "CREDITS":
-              menuMode = "TITLE_SCREEN"
+              menuMode = STATE_LEVEL_CREATOR_MENU
+           elif menuMode == STATE_CREDITS:
+              menuMode = STATE_TITLE
        elif mode in ["LEVEL_SELECT_DEFAULT", "LEVEL_SELECT_USERNAME"]:
-          mode = "GET_CARS_DEFAULT"
+          mode = CMD_GET_CARS_DEFAULT
        elif mode in ["CAR_SELECT_DEFAULT", "CAR_SELECT_USERNAME"]:
           resetLevel(level)
-          mode = "MAIN_MENU"
-       elif mode == "LEVEL_CREATOR":
+          mode = STATE_MAIN_MENU
+       elif mode == STATE_LEVEL_CREATOR:
           fakeWin = Tk()
           fakeWin.withdraw()
           quitCreator = messagebox.askyesnocancel("Quit Level Creator", "Are you sure that you want to quit the level creator?\nUnsaved changes will be lost")
           closeTk(fakeWin)
           if quitCreator:
              resetLevel(level)
-             mode = "MAIN_MENU"
-       elif mode == "CAR_CREATOR":
+             mode = STATE_MAIN_MENU
+       elif mode == STATE_CAR_CREATOR:
           discardCar(1)
        pyg.time.wait(200)
 
@@ -1343,7 +1338,7 @@ def arrowButton(win, col, flipCol, x, y, mode):
                levelCreatorProperties["Type"] = 3
             if levelCreatorProperties["Type"] == 0:
                levelCreatorProperties["Type"] = 9
-         elif mode == "NEXT":
+         elif mode == CMD_NEXT:
             levelCreatorProperties["Type"] += 1
             if levelCreatorProperties["Type"] in [1, 3]:
                if levelCreatorProperties["Angle"] == 180:
@@ -1361,7 +1356,7 @@ def arrowButton(win, col, flipCol, x, y, mode):
    win.blit(btn, (x, y))
    if mode in["ACW", "BACK"]:
       drawText(win, arrowFont, "\u2190", x + 5, y, r, g, b)
-   elif mode in ["CW", "NEXT"]:
+   elif mode in ["CW", CMD_NEXT]:
       drawText(win, arrowFont, "\u2192", x + 5, y, r, g, b)
 
 def drawText(win, fnt, s, x, y, r, g, b):
@@ -1389,7 +1384,7 @@ def createTk(mde):
    window.protocol("WM_DELETE_WINDOW", lambda: closeTk(window))
    window.after(1, lambda: window.focus_force())
    window.resizable(False, False)
-   if mde != "CAR_CREATOR":
+   if mde != STATE_CAR_CREATOR:
       window.attributes("-topmost", True)
    frame = Frame(window)
    frame.pack()
@@ -1399,26 +1394,26 @@ def createTk(mde):
    elif mde == "CREATE_ACCOUNT":
       window.title("Create Account")
       accountCreation(window, frame)
-   elif mde == "EDIT_CAR":
+   elif mde == CMD_EDIT_CAR:
       window.title("Edit Car")
       editCreation(window, frame, "Car")
    elif mde == "CAR_OPTIONS":
       window.title("Car Properties")
       editCarProperties(window, frame)
-   elif mde == "LEVEL_OPTIONS":
+   elif mde == STATE_LEVEL_OPTIONS:
       window.title("Advanced Properties")
       editLevelProperties(window, frame)
-   elif mde == "EDIT_LEVEL":
+   elif mde == CMD_EDIT_LEVEL:
       window.title("Edit Level")
       editCreation(window, frame, "Level")
    elif mde == "SOUND":
       return window, frame
-   elif mde == "MENU_OPTIONS":
+   elif mde == STATE_MENU_OPTIONS:
       window.title("Game Options")
       gameOptions(window, frame, "MENU")
-   elif mde == "PAUSED_OPTIONS":
+   elif mde == STATE_PAUSED_OPTIONS:
       window.title("Game Options")
-      gameOptions(window, frame, "PAUSED")
+      gameOptions(window, frame, STATE_PAUSED)
    elif mde == "CHANGE_USERNAME":
       window.title("Change Username")
       changeUsername(window, frame)
@@ -1449,7 +1444,7 @@ def accountCreation(win, frame):
 
 def gameOptions(win, frame, mde):
    global units, volume, username
-   if username == "Guest" or mde == "PAUSED":
+   if username == "Guest" or mde == STATE_PAUSED:
       offset = 1
    else:
       offset = 2
@@ -1475,7 +1470,7 @@ def gameOptions(win, frame, mde):
    engineScale = Scale(frame, from_=0, to_=100, orient=HORIZONTAL)
    engineScale.set(volume["Engine"])
    engineScale.grid(row=5, column=offset)
-   if username != "Guest" and mde != "PAUSED":
+   if username != "Guest" and mde != STATE_PAUSED:
       changeUnameBtn = Button(frame, text="Change Username", command=lambda:createTk("CHANGE_USERNAME"))
       changeUnameBtn.grid(row=6, column=0, padx=5, pady=5)
       changePwordBtn = Button(frame, text="Change Password", command=lambda:createTk("CHANGE_PASSWORD"))
@@ -1508,8 +1503,8 @@ def deleteAccount(win):
       try:
          shutil.rmtree(USER_DATA_DIR + username)
          messagebox.showinfo("Account Deleted", "Your account has been successfully deleted")
-         mode = "MAIN_MENU"
-         menuMode = "TITLE_SCREEN"
+         mode = STATE_MAIN_MENU
+         menuMode = STATE_TITLE
          closeTk(win)
       except:
          messagebox.showerror("Error deleting account", "The account cannot be deleted. Make sure that any game related files/folders are closed before deleting")
@@ -1565,7 +1560,7 @@ def editCreation(win, frame, typ):
 def closeCreationEditor(win):
    global mode
    closeTk(win)
-   mode = "MAIN_MENU"
+   mode = STATE_MAIN_MENU
 
 def openCreation(win, name, typ):
    global mode, editCarCreator
@@ -1577,12 +1572,12 @@ def openCreation(win, name, typ):
          editCarCreator = True
          getCarCreation()
          editCarCreator = False
-         mode = "CAR_CREATOR"
+         mode = STATE_CAR_CREATOR
       else:
          global levelCreatorProperties
          levelCreatorProperties["Name"] = name
          getLevelCreation()
-         mode = "LEVEL_CREATOR"
+         mode = STATE_LEVEL_CREATOR
    else:
       messagebox.showwarning(typ + " not selected", "Please select a " + typ.lower() + " to edit")
 
@@ -1709,11 +1704,11 @@ def discardCar(button):
             if os.path.exists(location + DATA_BIN) == False:
                shutil.rmtree(location)
             if button == 0:
-               mode = "QUIT"
+               mode = CMD_QUIT
             else:
-               menuMode = "CAR_CREATOR_MENU"
-               mode = "MAIN_MENU"
-            resetCreator("CAR_CREATOR")
+               menuMode = STATE_CAR_CREATOR_MENU
+               mode = STATE_MAIN_MENU
+            resetCreator(STATE_CAR_CREATOR)
                 
 def saveCar(win, carNameEntry, speed, acceleration, handling, offroad, engine, editCar):
    global username, menuMode, levelCreatorProperties, carCreatorProperties
@@ -1862,7 +1857,7 @@ def verifyUserDetails(mode, win, unameBox=None, oldPwordBox=None, pwordBox=None,
          pyg.mixer.Channel(3).set_volume(volume["Sound"] / 100)
          pyg.mixer.Channel(4).set_volume(volume["Sound"] / 100)
          data.close()
-         menuMode = "MAIN_MENU"
+         menuMode = STATE_MAIN_MENU
    else:
       if mode in [2, 3]:
          if uname == "":
@@ -1952,13 +1947,13 @@ def createAccount(uname, pword=""):
       pickle.dump(dataArray, data)
       data.close()
       username = uname
-      menuMode = "MAIN_MENU"
+      menuMode = STATE_MAIN_MENU
    except:
       fakeWin = Tk()
       fakeWin.withdraw()
       messagebox.showerror("Error creating account", "The account cannot be created. Make sure that any game related files/folders are closed before creating")
       closeTk(fakeWin)
-      menuMode = "TITLE_SCREEN"
+      menuMode = STATE_TITLE
 
 def editLevelProperties(win, frame):
     global levelCreatorProperties
@@ -2211,9 +2206,9 @@ def closeTk(tkWin):
 #MAIN PROGRAM STARTS HERE
            
 run = True
-key = {"Up" : False, "Down" : False, "Left" : False, "Right" : False, "Space" : False, "Enter" : False, "Escape" : False, "W" : False, "A" : False, "S" : False, "D" : False}
-mode = "MAIN_MENU"
-menuMode = "TITLE_SCREEN"
+key = {DIR_UP : False, DIR_DOWN : False, DIR_LEFT : False, DIR_RIGHT : False, "Space" : False, "Enter" : False, "Escape" : False, KEY_W : False, KEY_A : False, KEY_S : False, KEY_D : False}
+mode = STATE_MAIN_MENU
+menuMode = STATE_TITLE
 pieces = getPcs()
 username = ""
 units = "METRIC"
@@ -2274,7 +2269,7 @@ timer = pyg.time.Clock()
 
 while run:
    for event in pyg.event.get():
-      if event.type == pyg.QUIT or mode == "QUIT":
+      if event.type == pyg.QUIT or mode == CMD_QUIT:
          if username in ["Guest", ""]:
             try:
                shutil.rmtree(GUEST_USER)
@@ -2287,21 +2282,21 @@ while run:
          mouseDown = False
       if event.type == pyg.KEYDOWN:
          if event.key == pyg.K_UP:
-             key["Up"] = True
+             key[DIR_UP] = True
          elif event.key == pyg.K_DOWN:
-             key["Down"] = True
+             key[DIR_DOWN] = True
          elif event.key == pyg.K_LEFT:
-             key["Left"] = True
+             key[DIR_LEFT] = True
          elif event.key == pyg.K_RIGHT:
-             key["Right"] = True
+             key[DIR_RIGHT] = True
          elif event.key == pyg.K_w:
-             key["W"] = True
+             key[KEY_W] = True
          elif event.key == pyg.K_s:
-             key["S"] = True
+             key[KEY_S] = True
          elif event.key == pyg.K_a:
-             key["A"] = True
+             key[KEY_A] = True
          elif event.key == pyg.K_d:
-             key["D"] = True
+             key[KEY_D] = True
          elif event.key == pyg.K_SPACE:
              key["Space"] = True
          elif event.key == pyg.K_RETURN:
@@ -2310,39 +2305,39 @@ while run:
             key["Escape"] = True
       if event.type == pyg.KEYUP:
          if event.key == pyg.K_UP:
-             key["Up"] = False
+             key[DIR_UP] = False
          elif event.key == pyg.K_DOWN:
-             key["Down"] = False
+             key[DIR_DOWN] = False
          elif event.key == pyg.K_LEFT:
-             key["Left"] = False
+             key[DIR_LEFT] = False
          elif event.key == pyg.K_RIGHT:
-             key["Right"] = False
+             key[DIR_RIGHT] = False
          elif event.key == pyg.K_w:
-             key["W"] = False
+             key[KEY_W] = False
          elif event.key == pyg.K_s:
-             key["S"] = False
+             key[KEY_S] = False
          elif event.key == pyg.K_a:
-             key["A"] = False
+             key[KEY_A] = False
          elif event.key == pyg.K_d:
-             key["D"] = False
+             key[KEY_D] = False
          elif event.key == pyg.K_SPACE:
              key["Space"] = False
          elif event.key == pyg.K_RETURN:
              key["Enter"] = False
          elif event.key == pyg.K_ESCAPE:
             key["Escape"] = False
-   if mode == "MAIN_MENU":
-       if menuMode == "TITLE_SCREEN":
+   if mode == STATE_MAIN_MENU:
+       if menuMode == STATE_TITLE:
           username = ""
        mainMenu(window, level, camera)
    elif mode == "ENTER_DETAILS":
       pyg.mixer.Channel(1).stop()
       createTk(mode)
-      mode = "MAIN_MENU"
+      mode = STATE_MAIN_MENU
    elif mode == "CREATE_ACCOUNT":
       pyg.mixer.Channel(1).stop()
       createTk(mode)
-      mode = "MAIN_MENU"
+      mode = STATE_MAIN_MENU
    elif mode == "GUEST_ACCOUNT":
       units = "METRIC"
       volume["Music"] = 100
@@ -2354,24 +2349,24 @@ while run:
       pyg.mixer.Channel(3).set_volume(volume["Sound"] / 100)
       pyg.mixer.Channel(4).set_volume(volume["Sound"] / 100)
       createAccount("Guest")
-      mode = "MAIN_MENU"
-   elif mode == "MENU_OPTIONS":
+      mode = STATE_MAIN_MENU
+   elif mode == STATE_MENU_OPTIONS:
       pyg.mixer.Channel(1).stop()
       createTk(mode)
-      mode = "MAIN_MENU"
-   elif mode == "PAUSED_OPTIONS":
+      mode = STATE_MAIN_MENU
+   elif mode == STATE_PAUSED_OPTIONS:
       createTk(mode)
-      mode = "PAUSED"      
+      mode = STATE_PAUSED      
    elif mode == "CREATE_CAR_DIRECTORY":
       os.mkdir(USER_DATA_DIR + username + "/Cars/Unnamed Car/")
       editCarCreator = False
-      mode = "CAR_CREATOR"
-   elif mode == "CAR_CREATOR":
+      mode = STATE_CAR_CREATOR
+   elif mode == STATE_CAR_CREATOR:
       pyg.mixer.Channel(1).stop()
       carCreator(window)
    elif mode == "IMPORT_IMAGE":
       carCreatorProperties["Image"] = importImage()
-      mode = "CAR_CREATOR"
+      mode = STATE_CAR_CREATOR
    elif mode == "CAR_OPTIONS":
       if carCreatorProperties["Image"] == None:
          fakeWin = Tk()
@@ -2380,66 +2375,66 @@ while run:
          closeTk(fakeWin)
       else:
          createTk(mode)
-      mode = "CAR_CREATOR"
-   elif mode == "EDIT_CAR":
+      mode = STATE_CAR_CREATOR
+   elif mode == CMD_EDIT_CAR:
       pyg.mixer.Channel(1).stop()
       createTk(mode)
-      if mode != "CAR_CREATOR":
-         mode = "MAIN_MENU"
-   elif mode == "LEVEL_OPTIONS":
+      if mode != STATE_CAR_CREATOR:
+         mode = STATE_MAIN_MENU
+   elif mode == STATE_LEVEL_OPTIONS:
       createTk(mode)
-      mode = "LEVEL_CREATOR"
+      mode = STATE_LEVEL_CREATOR
    elif mode == "LEVEL_CREATOR_RESET":
-      resetCreator("LEVEL_CREATOR")
-      mode = "LEVEL_CREATOR"
-   elif mode == "LEVEL_CREATOR":
+      resetCreator(STATE_LEVEL_CREATOR)
+      mode = STATE_LEVEL_CREATOR
+   elif mode == STATE_LEVEL_CREATOR:
       pyg.mixer.Channel(1).stop()
       levelCreator(window, camera)
-   elif mode == "EDIT_LEVEL":
+   elif mode == CMD_EDIT_LEVEL:
       pyg.mixer.Channel(1).stop()
       createTk(mode)
-   elif mode == "GET_CARS_DEFAULT":
+   elif mode == CMD_GET_CARS_DEFAULT:
       pyg.mixer.Channel(1).stop()
       carProperties, mode, car = getCars("Default", mode, car)
-   elif mode == "GET_CARS_USERNAME":
+   elif mode == CMD_GET_CARS_USERNAME:
       carProperties, mode, car = getCars(username, mode, car)
    elif mode == "CAR_SELECT_DEFAULT":
       carSelect(window, "Default")
    elif mode == "CAR_SELECT_USERNAME":
       carSelect(window, username)
-   elif mode == "GET_LEVELS_DEFAULT":
+   elif mode == CMD_GET_LEVELS_DEFAULT:
       level = 1
       levelProperties, mode = getLevels("Default", mode)
       resetLevel(level)
       walls, randomGates = rebuildMaze()
       mode = "LEVEL_SELECT_DEFAULT"
-   elif mode == "GET_LEVELS_USERNAME":
+   elif mode == CMD_GET_LEVELS_USERNAME:
       level = 1
       levelProperties, mode = getLevels(username, mode)
    elif mode == "LEVEL_SELECT_DEFAULT":
       levelSelect(window, "Default")
    elif mode == "LEVEL_SELECT_USERNAME":
       levelSelect(window, username)
-   elif mode == "RESET_TIMER":
+   elif mode == CMD_RESET_TIMER:
       resetLevel(level)
       pyg.mixer.Channel(1).play(engines[carProperties["Engine"][car]][0], loops=-1)
       if levelProperties["Music"][level - 1] != None:
          pyg.mixer.Channel(2).play(levelProperties["Music"][level - 1], loops=-1)
       timer = pyg.time.Clock()
-      mode = "PLAY_GAME"
-   elif mode == "PLAY_GAME":
+      mode = CMD_PLAY_GAME
+   elif mode == CMD_PLAY_GAME:
       playGame(window, camera, timer)
-   elif mode == "PAUSED":
+   elif mode == STATE_PAUSED:
       pyg.mixer.Channel(1).stop()
       pyg.mixer.Channel(2).pause()
       r, g, b = invertCol(levelProperties["Colour"][level][0], levelProperties["Colour"][level][1], levelProperties["Colour"][level][2])
       pauseMenu(window, camera, [r, g, b])
-   elif mode == "UNPAUSE":
+   elif mode == CMD_UNPAUSE:
       velocity = pausedVelocity
       pyg.mixer.Channel(1).play(engines[carProperties["Engine"][car]][enginePitch], loops=-1)
       pyg.mixer.Channel(2).unpause()
       timer = pyg.time.Clock()
-      mode = "PLAY_GAME"
+      mode = CMD_PLAY_GAME
    elif mode == "WIN":
       finishedLevel(window, camera, mode)
    if monitor != (1920, 1080):
