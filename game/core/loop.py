@@ -1,9 +1,8 @@
 import time
 from game.config.constants import TARGET_FPS
-from game.io.render import begin_frame, end_frame
 
-def run(screen, update_fn, render_fn):
-    dt_target = 1 / TARGET_FPS
+def run(update_fn, render_fn, fps=60):
+    dt_target = 1.0 / fps
     last = time.perf_counter()
     running = True
     while running:
@@ -11,9 +10,8 @@ def run(screen, update_fn, render_fn):
         dt = now - last
         last = now
         running = update_fn(dt)
-        begin_frame()
-        render_fn(screen)
-        end_frame()
-        sleep = dt_target - (time.perf_counter() - now)
+        render_fn()
+        elapsed = time.perf_counter() - now
+        sleep = dt_target - elapsed
         if sleep > 0:
             time.sleep(sleep)

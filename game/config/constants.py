@@ -27,6 +27,7 @@ LEVEL_MUSIC_DIR = "/Levels/Music/"
 MUSIC_DIR = "Music/"
 ENGINE_SFX_DIR = "engine/"
 GUEST_USER = "UserData/Guest"
+FONT_FILE = "font.ttf"
 
 # New paths
 

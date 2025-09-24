@@ -14,32 +14,35 @@ DEFAULT_BINDINGS = {
     "mouse_up": [("event", pygame.MOUSEBUTTONUP)],
 }
 
-def poll_actions(bindings: dict = None):
-    bindings = bindings or DEFAULT_BINDINGS
+def _build_keymap(bindings):
+    km = {}
+    for name, pairs in bindings.items():
+        for kind, code in pairs:
+            km.setdefault((kind, code), []).append(name)
+    return km
+
+_KEYMAP = _build_keymap(DEFAULT_BINDINGS)
+
+def poll_actions(bindings=None):
+    bm = bindings or DEFAULT_BINDINGS
+    km = _KEYMAP if bindings is None else _build_keymap(bindings)
     actions = []
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    for e in pygame.event.get():
+        t = e.type
+        if t == pygame.QUIT:
             actions.append(("quit", "press", None))
-            continue
-        if event.type == pygame.VIDEORESIZE:
-            actions.append(("window_resized", "change", (event.w, event.h)))
-            continue
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            actions.append(("mouse_down", "press", event.button))
-            continue
-        if event.type == pygame.MOUSEBUTTONUP:
-            actions.append(("mouse_up", "release", event.button))
-            continue
-        if event.type == pygame.KEYDOWN:
-            k = event.key
-            for name, binds in bindings.items():
-                if ("keydown", k) in binds:
-                    actions.append((name, "press", k))
-            continue
-        if event.type == pygame.KEYUP:
-            k = event.key
-            for name, binds in bindings.items():
-                if ("keyup", k) in binds:
-                    actions.append((name, "release", k))
-            continue
+        elif t == pygame.VIDEORESIZE:
+            actions.append(("window_resized", "change", (e.w, e.h)))
+        elif t == pygame.MOUSEBUTTONDOWN:
+            actions.append(("mouse_down", "press", e.button))
+        elif t == pygame.MOUSEBUTTONUP:
+            actions.append(("mouse_up", "release", e.button))
+        elif t == pygame.KEYDOWN:
+            k = e.key
+            for name in km.get(("keydown", k), ()):
+                actions.append((name, "press", k))
+        elif t == pygame.KEYUP:
+            k = e.key
+            for name in km.get(("keyup", k), ()):
+                actions.append((name, "release", k))
     return actions

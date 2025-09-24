@@ -12,7 +12,7 @@ from pygame.locals import*
 from game.config.constants import *
 from game.io.assets import load_image, load_sound, load_font
 from game.io.input import poll_actions
-from game.io.render import init_display, end_frame, get_mouse_pos_logical, get_half_screen, get_logical_size, resize_physical
+from game.io.render import end_frame, get_half_screen, get_logical_size
 
 import pygame as pyg
 
@@ -380,7 +380,7 @@ def levelCreator(win, cam):
    xPos = (centX + (mousePos[0] - (screen[0]//5)))
    yPos = (-(centY + mousePos[1] - 120))
    for touch in mouseTouch:
-      if clicked[0] == 1 and mouseDown:
+      if mouseClicked and mouseDown:
          playSound(sounds[1])
          if levelCreatorProperties["PieceSelected"] == False:
             levelCreatorProperties["PieceSelected"] = True
@@ -390,7 +390,7 @@ def levelCreator(win, cam):
    if levelCreatorProperties["PieceSelected"]:
       rotate = pyg.transform.rotate(img, levelCreatorProperties["Angle"])
       win.blit(rotate, (mousePos[0], mousePos[1])) 
-   if levelCreatorProperties["PieceSelected"] and (clicked[0] == 1 and mouseDown) and (mousePos[0] > screen[0]//5 and mousePos[1] > 120):
+   if levelCreatorProperties["PieceSelected"] and (mouseClicked and mouseDown) and (mousePos[0] > screen[0]//5 and mousePos[1] > 120):
       playSound(sounds[1])
       levelCreatorProperties["Undo"] = []
       if levelCreatorProperties["Type"] in [1, 2]:
@@ -1206,7 +1206,7 @@ def menuButton(win, fnt, x, y, s, r, g, b, mnuMde, mde, mnuAndMde=""):
     if mousePos[0] > x - 100 and mousePos[0] < x + 100 and mousePos[1] > y and mousePos[1] < y + 50:
        btn.fill((r1, g1, b1))
        r2, g2, b2 = r, g, b
-       if clicked[0] == 1 and mouseDown:
+       if mouseClicked and mouseDown:
           playSound(sounds[1])
           if mnuAndMde == "":
              if mnuMde:
@@ -1237,7 +1237,7 @@ def closeButton(win, col):
     if mousePos[0] > x - 100 and mousePos[0] < x + 100 and mousePos[1] > y and mousePos[1] < y + 50:
         btn.fill((r, g, b))
         r1, g1, b1 = col[0], col[1], col[2]
-        if clicked[0] == 1 and mouseDown:
+        if mouseClicked and mouseDown:
             playSound(sounds[1])
             if mode == STATE_CAR_CREATOR:
                discardCar(0)
@@ -1268,7 +1268,7 @@ def backButton(win, col):
     if mousePos[0] > x - 100 and mousePos[0] < x + 100 and mousePos[1] > y and mousePos[1] < y + 50:
        btn.fill((r, g, b))
        r1, g1, b1 = col[0], col[1], col[2]
-       if clicked[0] == 1 and mouseDown:
+       if mouseClicked and mouseDown:
           buttonPressed = True
     else:
        btn.fill((col[0], col[1], col[2]))
@@ -1313,7 +1313,7 @@ def arrowButton(win, col, flipCol, x, y, mode):
    if (mousePos[0] > x - 100 and mousePos[0] < x + 100 and mousePos[1] > y and mousePos[1] < y + 50):
       btn.fill(col)
       r, g, b = flipCol
-      if clicked[0] == 1 and mouseDown:
+      if mouseClicked and mouseDown:
          playSound(sounds[0])
          if mode == "ACW":
             levelCreatorProperties["Angle"] -= 90
@@ -2274,9 +2274,13 @@ randomGates = []
 screen = None
 halfScreen = (0, 0)
 mousePos = (0, 0)
-clicked = (False, False, False)
+mouseDown = False
+mouseClicked = False
+_prevDownLeft = False
 sounds, engines = {}, {}
 _font_cache = {}
+walls = {"Right" : [], "Left" : [], "Up" : [], "Down" : []}
+randomGates = []
 
 
 def bootstrap(scr):
@@ -2288,6 +2292,8 @@ def bootstrap(scr):
    global levelProperties, walls
    global sounds, engines
    global screen, halfScreen, mousePos, clicked
+   global walls, randomGates
+   global _booted
 
    import random
    import pygame as pyg
@@ -2316,19 +2322,25 @@ def bootstrap(scr):
    _booted = True
 
 def update(dt):
-   global mousePos, clicked, mouseDown, _run, run, mouseDown, mode, username, volume, timer, velocity, pausedVelocity, enginePitch, level
+   global mousePos, mouseDown, mouseClicked, _prevDownLeft, _run, run, mouseDown, mode, username, volume, timer, velocity, pausedVelocity, enginePitch, level, car, carProperties, levelProperties
    from game.io.render import get_mouse_pos_logical, resize_physical
    actions = poll_actions()
+   mouseClicked = False
    for name, phase, payload in actions:
-        if name == "window_resized" and phase == "change":
-            resize_physical(payload)
+      if name == "window_resized" and phase == "change":
+         resize_physical(payload)
+   mousePos = tuple(map(int, get_mouse_pos_logical()))
+   buttons = pyg.mouse.get_pressed()
+   currLeft = bool(buttons[0])
+
+   edgeLeft = 1 if (currLeft and not _prevDownLeft) else 0
+   mouseClicked = edgeLeft == 1
+   _prevDownLeft = currLeft
    quit_requested, mouse_state = apply_actions_to_key(actions, key)
    if mouse_state is True:
       mouseDown = True
    elif mouse_state is False:
       mouseDown = False
-   mousePos = get_mouse_pos_logical()
-   clicked = pyg.mouse.get_pressed()
    if quit_requested or mode == CMD_QUIT:
       if username in ["Guest", ""]:
          try:
