@@ -11,6 +11,7 @@ from pygame.locals import*
 
 from game.config.constants import *
 from game.io.assets import load_image, load_sound, load_font
+from game.io.input import poll_actions
 
 import pygame as pyg
 
@@ -2204,6 +2205,38 @@ def closeTk(tkWin):
    tkWin.destroy()
 
 #MAIN PROGRAM STARTS HERE
+
+
+
+ACTION_TO_KEY = {
+    "up": DIR_UP,
+    "down": DIR_DOWN,
+    "left": DIR_LEFT,
+    "right": DIR_RIGHT,
+    "space": "Space",
+    "enter": "Enter",
+    "escape": "Escape",
+}
+
+def apply_actions_to_key(actions, key_dict):
+    quit_requested = False
+    mouse_down_state = None
+    for name, phase, payload in actions:
+        if name == "quit":
+            quit_requested = True
+        elif name == "mouse_down" and phase == "press":
+            mouse_down_state = True
+        elif name == "mouse_up" and phase == "release":
+            mouse_down_state = False
+        elif name in ACTION_TO_KEY:
+            mapped = ACTION_TO_KEY[name]
+            key_dict[mapped] = (phase == "press")
+        elif name == "pause" and phase == "press":
+            key_dict["Escape"] = True
+    return quit_requested, mouse_down_state
+
+
+
            
 run = True
 key = {DIR_UP : False, DIR_DOWN : False, DIR_LEFT : False, DIR_RIGHT : False, "Space" : False, "Enter" : False, "Escape" : False, KEY_W : False, KEY_A : False, KEY_S : False, KEY_D : False}
@@ -2268,64 +2301,19 @@ resetLevel(level)
 timer = pyg.time.Clock()
 
 while run:
-   for event in pyg.event.get():
-      if event.type == pyg.QUIT or mode == CMD_QUIT:
-         if username in ["Guest", ""]:
-            try:
-               shutil.rmtree(GUEST_USER)
-            except OSError:
-               pass
-         run = False
-      if event.type == pyg.MOUSEBUTTONDOWN:
-         mouseDown = True
-      elif event.type == pyg.MOUSEBUTTONUP:
-         mouseDown = False
-      if event.type == pyg.KEYDOWN:
-         if event.key == pyg.K_UP:
-             key[DIR_UP] = True
-         elif event.key == pyg.K_DOWN:
-             key[DIR_DOWN] = True
-         elif event.key == pyg.K_LEFT:
-             key[DIR_LEFT] = True
-         elif event.key == pyg.K_RIGHT:
-             key[DIR_RIGHT] = True
-         elif event.key == pyg.K_w:
-             key[KEY_W] = True
-         elif event.key == pyg.K_s:
-             key[KEY_S] = True
-         elif event.key == pyg.K_a:
-             key[KEY_A] = True
-         elif event.key == pyg.K_d:
-             key[KEY_D] = True
-         elif event.key == pyg.K_SPACE:
-             key["Space"] = True
-         elif event.key == pyg.K_RETURN:
-             key["Enter"] = True
-         elif event.key == pyg.K_ESCAPE:
-            key["Escape"] = True
-      if event.type == pyg.KEYUP:
-         if event.key == pyg.K_UP:
-             key[DIR_UP] = False
-         elif event.key == pyg.K_DOWN:
-             key[DIR_DOWN] = False
-         elif event.key == pyg.K_LEFT:
-             key[DIR_LEFT] = False
-         elif event.key == pyg.K_RIGHT:
-             key[DIR_RIGHT] = False
-         elif event.key == pyg.K_w:
-             key[KEY_W] = False
-         elif event.key == pyg.K_s:
-             key[KEY_S] = False
-         elif event.key == pyg.K_a:
-             key[KEY_A] = False
-         elif event.key == pyg.K_d:
-             key[KEY_D] = False
-         elif event.key == pyg.K_SPACE:
-             key["Space"] = False
-         elif event.key == pyg.K_RETURN:
-             key["Enter"] = False
-         elif event.key == pyg.K_ESCAPE:
-            key["Escape"] = False
+   actions = poll_actions()
+   quit_requested, mouse_state = apply_actions_to_key(actions, key)
+   if mouse_state is True:
+      mouseDown = True
+   elif mouse_state is False:
+      mouseDown = False
+   if quit_requested or mode == CMD_QUIT:
+      if username in ["Guest", ""]:
+         try:
+            shutil.rmtree(GUEST_USER)
+         except OSError:
+            pass
+      run = False   
    if mode == STATE_MAIN_MENU:
        if menuMode == STATE_TITLE:
           username = ""
