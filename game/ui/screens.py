@@ -22,7 +22,7 @@ class MenuScreen(Screen):
         self.title_font = load_font(FONT_FILE, 100)
         cx, cy = get_half_screen()
         bw, bh, s = 300, 64, 20
-        y0 = cy - (bh*len(self.items) + s*(len(self.items)-1))/2
+        y0 = cy + (bh*len(self.items) + s*(len(self.items)-1))/10
         self.buttons = [
             Button((cx-bw//2, int(y0+i*(bh+s)), bw, bh),
                    label, self.font,
