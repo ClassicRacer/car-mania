@@ -10,6 +10,8 @@ from tkinter import messagebox, filedialog, colorchooser
 from PIL import Image
 from pygame.locals import*
 
+from game.config.constants import *
+
 import pygame as pyg
 
 class createSprite(pyg.sprite.Sprite):
@@ -41,7 +43,7 @@ def getSounds():
       sound = pyg.mixer.Sound(location + name)
       snd.append(sound)
    eng = []
-   location = "Sound/Engine/"
+   location = ENGINE_SFX_DIR
    for engNum in range(23):
       eng.append([])
       if engNum in [0, 2, 3, 11, 12, 16]:
@@ -63,7 +65,7 @@ def getSounds():
       else:
          soundNum = 0
       for engPitch in range(soundNum):
-         sound = pyg.mixer.Sound(location + str(engNum) + "-" + str(engPitch) + ".wav")
+         sound = pyg.mixer.Sound(location + str(engNum) + "-" + str(engPitch) + EXT_WAV)
          eng[engNum].append(sound)
    return snd, eng
 
@@ -257,7 +259,7 @@ def carCreator(win):
    if units == "METRIC":
       speed = str(carCreatorProperties["TopSpeed"] * 25) + " kph"
    else:
-      speed = str(round(carCreatorProperties["TopSpeed"] * 25 / 1.609344)) + " mph"
+      speed = str(round(carCreatorProperties["TopSpeed"] * 25 / KM_PER_MILE)) + " mph"
    centerTextScreen(win, font, "Top Speed: " + speed, y - textY, r1, g1, b1)
    pyg.draw.rect(win, (0, 150, 200), (x + 2, y + gap + 2, (carCreatorProperties["Acceleration"] / 10) * size, 18), 0)
    pyg.draw.rect(win, (r1, g1, b1), (x, y + gap + 2, size + 2, 20), 2)
@@ -280,23 +282,23 @@ def importImage(location=""):
       if editCarCreator == False:
          name = location.split("/")[len(location.split("/")) - 1]
          extension = os.path.splitext(location)[1]
-         carLocation = "UserData/" + username + "/Cars/" + carCreatorProperties["Name"] + "/"
-         if name not in ["car.png", "car.jpg", "tempcar.png", "tempcar.jpg"]:
+         carLocation = USER_DATA_DIR + username + CARS_DIR + carCreatorProperties["Name"] + "/"
+         if name not in ["car.png", "car.jpg", TEMP_CAR_PNG, "tempcar.jpg"]:
             shutil.copy(location, carLocation)
-            if extension == ".jpg":
+            if extension == EXT_JPG:
                convert = Image.open(carLocation + name)
                try:
-                  convert.save(carLocation + "tempcar.png")
+                  convert.save(carLocation + TEMP_CAR_PNG)
                except FileExistsError:
-                  os.remove(carLocation + "tempcar.png")
-                  convert.save(carLocation + "tempcar.png")
+                  os.remove(carLocation + TEMP_CAR_PNG)
+                  convert.save(carLocation + TEMP_CAR_PNG)
                os.remove(carLocation + name)
             else:
                try:
-                  os.rename(carLocation + name, carLocation + "tempcar.png")
+                  os.rename(carLocation + name, carLocation + TEMP_CAR_PNG)
                except FileExistsError:
-                  os.remove(carLocation + "tempcar.png")
-                  os.rename(carLocation + name, carLocation + "tempcar.png")
+                  os.remove(carLocation + TEMP_CAR_PNG)
+                  os.rename(carLocation + name, carLocation + TEMP_CAR_PNG)
          else:
             fakeWin = Tk()
             fakeWin.withdraw()
@@ -683,15 +685,15 @@ def drawLevel(win, level, cam, move):
          if key["Right"] or key["D"]:
              playSound(sounds[randint(11, 14)], channel=4)
              angle += handling / velocity
-     elif velocity > 0.05 or velocity < -0.05:
-        if velocity > 0.05:
+     elif velocity > SPEED_STEP or velocity < -SPEED_STEP:
+        if velocity > SPEED_STEP:
            if key["Left"] or key["A"]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle -= handling / 5
            if key["Right"] or key["D"]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle += handling / 5
-        elif velocity < -0.05:
+        elif velocity < -SPEED_STEP:
            if key["Left"] or key["A"]:
               playSound(sounds[randint(11, 14)], channel=4)
               angle += handling / 5
@@ -740,17 +742,17 @@ def playEngineSound(typ, speed):
             enginePitch = i
          
 def getLevels(account, mde, load=False):
-   location = "UserData/" + account + "/Levels/"
+   location = USER_DATA_DIR + account + LEVELS_DIR
    if account == "Default":
       lvNum = getLvNum(location + "Code/")
       properties = {"Name" : [""], "Colour" : [[0 for i in range(3)] for j in range(lvNum + 1)], "Code" : [[[""]] for i in range(lvNum + 1)], "Music" : [], "Laps" : [0], "Gates" : [0] * (lvNum + 1)}
       for lv in range(1, lvNum + 1):
          try:
-            music = pyg.mixer.Sound(location + "Music/" + str(lv) + ".wav")
+            music = pyg.mixer.Sound(location + MUSIC_DIR + str(lv) + EXT_WAV)
          except:
             music = None
          properties["Music"].append(music)
-         with open(location + "Code/" + str(lv) + ".txt", "r") as file:
+         with open(location + "Code/" + str(lv) + EXT_TXT, "r") as file:
             code = reader(file, delimiter=',')
             for line in code:
                if line[0] == "name":
@@ -786,7 +788,7 @@ def getLevels(account, mde, load=False):
                   if line[0] == "gate":
                      properties["Gates"][level] += 1
          try:
-            music = pyg.mixer.Sound(location + "Music/" + properties["Name"][lv + 1] + ".wav")
+            music = pyg.mixer.Sound(location + MUSIC_DIR + properties["Name"][lv + 1] + EXT_WAV)
          except:
             music = None
          properties["Music"].append(music)
@@ -796,10 +798,10 @@ def getLevels(account, mde, load=False):
       
 def getCreatorName(account):
    names = []
-   location = "UserData/" + account + "/Levels/Code/"
+   location = USER_DATA_DIR + account + LEVEL_CODE_DIR
    lvNum = getLvNum(location)
    for lv in range(1, lvNum + 1):
-      with open(location + str(level) + ".txt", "r") as file:
+      with open(location + str(level) + EXT_TXT, "r") as file:
          code = reader(file, delimiter=',')
          for line in code:
             if line[0] == "name":
@@ -808,12 +810,12 @@ def getCreatorName(account):
 
 def getCarCreation():
    global username, carCreatorProperties
-   location = "UserData/" + username + "/Cars/" + carCreatorProperties["Name"] + "/car.png"
+   location = USER_DATA_DIR + username + CARS_DIR + carCreatorProperties["Name"] + CAR_PNG
    if os.path.exists(location) == False:
-      location = "UserData/" + username + "/Cars/" + carCreatorProperties["Name"] + "/car.jpg"
+      location = USER_DATA_DIR + username + CARS_DIR + carCreatorProperties["Name"] + "/car.jpg"
    carCreatorProperties["Image"] = importImage(location=location)
-   location = "UserData/" + username + "/Cars/" + carCreatorProperties["Name"]
-   data = open(location + "/data.bin", "rb")
+   location = USER_DATA_DIR + username + CARS_DIR + carCreatorProperties["Name"]
+   data = open(location + DATA_BIN, "rb")
    statsArray = pickle.load(data)
    data.close()
    carCreatorProperties["TopSpeed"] = statsArray[0]
@@ -826,8 +828,8 @@ def getCarCreation():
 def getLevelCreation():
    global username, levelCreatorProperties
    resetCreator("GET_LEVEL_CREATION")
-   location = "UserData/" + username + "/Levels/Code/"
-   with open(location + levelCreatorProperties["Name"] + ".txt", "r") as file:
+   location = USER_DATA_DIR + username + LEVEL_CODE_DIR
+   with open(location + levelCreatorProperties["Name"] + EXT_TXT, "r") as file:
       code = reader(file, delimiter=',')
       i = 0
       for line in code:
@@ -844,7 +846,7 @@ def getLevelCreation():
                
 def getCars(account, mde, vehicle, load=False):
    properties = {"Name" : [], "Speed" : [], "Acceleration" : [], "Handling" : [], "Offroad" : [], "Engine" : [], "Image" : []}
-   location = "UserData/" + account + "/Cars/"
+   location = USER_DATA_DIR + account + CARS_DIR
    folder = getFolderItems(location)
    if folder == ['']:
       location = "UserData/Default/Cars/"
@@ -854,7 +856,7 @@ def getCars(account, mde, vehicle, load=False):
       else:
          name = folder[data]
       properties["Name"].append(name)
-      carData = open(location + folder[data] + "/data.bin", "rb")
+      carData = open(location + folder[data] + DATA_BIN, "rb")
       statsArray = pickle.load(carData)
       carData.close()
       properties["Speed"].append(statsArray[0])
@@ -862,9 +864,9 @@ def getCars(account, mde, vehicle, load=False):
       properties["Handling"].append(statsArray[2])
       properties["Offroad"].append(statsArray[3])
       properties["Engine"].append(statsArray[4])
-      extension = ".jpg"
-      if os.path.exists(location + "/" + folder[data] + "/car" + ".png"):
-         extension = ".png"
+      extension = EXT_JPG
+      if os.path.exists(location + "/" + folder[data] + "/car" + EXT_PNG):
+         extension = EXT_PNG
       image = pyg.image.load(location + "/" + folder[data] + "/car" + extension)
       properties["Image"].append(image)
       carData.close()
@@ -900,7 +902,7 @@ def carSelect(win, account):
    centerTextScreen(win, font, "Use the LEFT or RIGHT key to change the car", screen[1] - 80, r, g, b)
    if account == "Default":
       centerTextScreen(win, font, "Default Cars", 150, r, g, b)
-      location = "UserData/" + username + "/Cars/"
+      location = USER_DATA_DIR + username + CARS_DIR
       folder = getFolderItems(location)
       if folder != ['']:
          menuButton(win, font, halfScreen[0], screen[1] - 160, "View Your Cars", r, g, b, False, "GET_CARS_USERNAME")
@@ -932,7 +934,7 @@ def carSelect(win, account):
    if units == "METRIC":
       speed = str(carProperties["Speed"][car] * 25) + " kph"
    else:
-      speed = str(round(carProperties["Speed"][car] * 25 / 1.609344)) + " mph"
+      speed = str(round(carProperties["Speed"][car] * 25 / KM_PER_MILE)) + " mph"
    centerTextScreen(win, font, "Top Speed: " + speed, y - textY, r, g, b)
    pyg.draw.rect(win, (0, 150, 200), (x + 2, y + gap + 2, (carProperties["Acceleration"][car] / 10) * size, 18), 0)
    pyg.draw.rect(win, (r, g, b), (x, y + gap + 2, size + 2, 20), 2)
@@ -990,7 +992,7 @@ def levelSelect(win, account):
    win.blit(bg, (halfScreen[0] - 300, screen[1] - 110))
    centerTextScreen(win, font, "Use WASD to look around the level", screen[1] - 110, r, g, b)
    centerTextScreen(win, font, "Use the LEFT or RIGHT key to change the level", screen[1] - 80, r, g, b)
-   location = "UserData/" + username + "/Levels/Code/"
+   location = USER_DATA_DIR + username + LEVEL_CODE_DIR
    userLvNum = getLvNum(location)
    location = "UserData/Default/Levels/Code/"
    defaultLvNum = getLvNum(location)
@@ -1136,7 +1138,7 @@ def finishedLevel(win, cam, position):
    if units == "METRIC":
       speed = str(round(abs(velocity * 25))) + " kph"
    else:
-      speed = str(round(abs((velocity * 25) / 1.609344))) + " mph"
+      speed = str(round(abs((velocity * 25) / KM_PER_MILE))) + " mph"
    centerTextPanel(win, font, speed, (screen[0] - 62), 10, r, g, b)
    
 def playGame(win, cam, tm):
@@ -1192,7 +1194,7 @@ def playGame(win, cam, tm):
     if units == "METRIC":
       speed = str(round(abs(velocity * 25))) + " kph"
     else:
-      speed = str(round(abs((velocity * 25) / 1.609344))) + " mph"
+      speed = str(round(abs((velocity * 25) / KM_PER_MILE))) + " mph"
     centerTextPanel(win, font, speed, (screen[0] - 62), 10, r, g, b)
 
 def menuButton(win, fnt, x, y, s, r, g, b, mnuMde, mde, mnuAndMde=""):
@@ -1504,7 +1506,7 @@ def deleteAccount(win):
    if delete:
       global username, mode, menuMode
       try:
-         shutil.rmtree("UserData/" + username)
+         shutil.rmtree(USER_DATA_DIR + username)
          messagebox.showinfo("Account Deleted", "Your account has been successfully deleted")
          mode = "MAIN_MENU"
          menuMode = "TITLE_SCREEN"
@@ -1513,14 +1515,14 @@ def deleteAccount(win):
          messagebox.showerror("Error deleting account", "The account cannot be deleted. Make sure that any game related files/folders are closed before deleting")
 
 def setOptions(win, unit, msc, snd, eng):
-   data = open("UserData/" + username + "/data.bin", "rb")
+   data = open(USER_DATA_DIR + username + DATA_BIN, "rb")
    contents = pickle.load(data)
    data.close()
    contents[1] = unit
    contents[2] = msc
    contents[3] = snd
    contents[4] = eng
-   data = open("UserData/" + username + "/data.bin", "wb")
+   data = open(USER_DATA_DIR + username + DATA_BIN, "wb")
    pickle.dump(contents, data)
    data.close()
    global units, volume
@@ -1537,7 +1539,7 @@ def setOptions(win, unit, msc, snd, eng):
 
 def editCreation(win, frame, typ):
    Label(frame, text="Choose " + typ.lower() + " to edit:").grid(row=0, column=0, columnspan=3, padx=5, pady=5)
-   location = "UserData/" + username + "/" + typ + "s/"
+   location = USER_DATA_DIR + username + "/" + typ + "s/"
    if typ == "Car":
       folder = getFolderItems(location)
       start = 1
@@ -1547,7 +1549,7 @@ def editCreation(win, frame, typ):
    listBox = Listbox(frame, width=30, height=5 + len(folder))
    listBox.grid(row=1, column=0, rowspan=2, columnspan=3, padx=2, pady=5)
    for item in range(start, len(folder)):
-      folder[item] = folder[item].replace(".txt", "")
+      folder[item] = folder[item].replace(EXT_TXT, "")
       listBox.insert(item, folder[item])
    editBtn = Button(frame, text="Edit", command=lambda:openCreation(win, listBox.get(ACTIVE), typ))
    editBtn.grid(row=3, column=0, padx=5, pady=5)
@@ -1588,21 +1590,21 @@ def deleteCreation(win, name, typ):
    if name != "":
       originalName = name
       if typ == "Level":
-         name = name + ".txt"
+         name = name + EXT_TXT
       delete = messagebox.askyesnocancel("Delete " + typ, "Are you sure you want to delete " + originalName + "?")
       error = False
       if delete:
          global username
          if typ == "Car":
-            location = "UserData/" + username + "/Cars/" + name
+            location = USER_DATA_DIR + username + CARS_DIR + name
             try:
                shutil.rmtree(location)
             except:
                messagebox.showerror("Error deleting car", "The account cannot be deleted. Make sure that any game related files/folders are closed before deleting")
          else:
-            location = "UserData/" + username + "/Levels/Code/" + name
+            location = USER_DATA_DIR + username + LEVEL_CODE_DIR + name
             os.remove(location)
-            location = "UserData/" + username + "/Levels/Music/" + originalName + ".wav"
+            location = USER_DATA_DIR + username + LEVEL_MUSIC_DIR + originalName + EXT_WAV
             os.remove(location)           
          messagebox.showinfo(typ + " deleted", originalName + " has been successfully deleted")
          closeCreationEditor(win)
@@ -1660,7 +1662,7 @@ def updateSpeed(item, value):
    if units == "METRIC":
       speed = str(int(value) * 25) + " kph"
    else:
-      speed = str(round(int(value) * 25 / 1.609344)) + " mph"
+      speed = str(round(int(value) * 25 / KM_PER_MILE)) + " mph"
    item["text"] = speed
 
 def soundTest(engName):
@@ -1676,7 +1678,7 @@ def soundTest(engName):
          name = "Max"
       else:
          name = str(pitch)
-      engBtn = Button(frame, text="Pitch " + name, command=lambda pitch=pitch:playTk("Sound/Engine/" + str(engPos) + "-" + str(pitch) + ".wav"))
+      engBtn = Button(frame, text="Pitch " + name, command=lambda pitch=pitch:playTk(ENGINE_SFX_DIR + str(engPos) + "-" + str(pitch) + EXT_WAV))
       engBtn.grid(row=1, column=pitch, padx=5, pady=5)
    stopBtn = Button(frame, text="Stop", command=stopTk)
    stopBtn.grid(row=1, column=pitch+1, padx=5, pady=5)
@@ -1698,13 +1700,13 @@ def discardCar(button):
     quitCreator = messagebox.askyesnocancel("Quit Car Creator", message)
     closeTk(fakeWin)
     if quitCreator:
-        location = "UserData/" + username + "/Cars/" + carCreatorProperties["Name"]
+        location = USER_DATA_DIR + username + CARS_DIR + carCreatorProperties["Name"]
         try:
             os.remove(location + "/tempcar.png")
         except:
             pass
         finally:
-            if os.path.exists(location + "/data.bin") == False:
+            if os.path.exists(location + DATA_BIN) == False:
                shutil.rmtree(location)
             if button == 0:
                mode = "QUIT"
@@ -1717,18 +1719,18 @@ def saveCar(win, carNameEntry, speed, acceleration, handling, offroad, engine, e
    global username, menuMode, levelCreatorProperties, carCreatorProperties
    nameError = verifyName(carNameEntry, "Car")
    if nameError == False:
-      location = "UserData/" + username + "/Cars/" + carCreatorProperties["Name"]
-      if os.path.exists(location + "/car.png") and os.path.exists(location + "/tempcar.png"):
-         os.remove(location + "/car.png")
-         os.rename(location + "/tempcar.png", location + "/car.png")
+      location = USER_DATA_DIR + username + CARS_DIR + carCreatorProperties["Name"]
+      if os.path.exists(location + CAR_PNG) and os.path.exists(location + "/tempcar.png"):
+         os.remove(location + CAR_PNG)
+         os.rename(location + "/tempcar.png", location + CAR_PNG)
       elif os.path.exists(location + "/tempcar.png"):
-         os.rename(location + "/tempcar.png", location + "/car.png")
+         os.rename(location + "/tempcar.png", location + CAR_PNG)
       carCreatorProperties["TopSpeed"] = speed
       carCreatorProperties["Acceleration"] = acceleration
       carCreatorProperties["Handling"] = handling
       carCreatorProperties["Offroad"] = offroad
       carCreatorProperties["EngineType"] = engine
-      data = open(location + "/data.bin", "wb")
+      data = open(location + DATA_BIN, "wb")
       dataArray = [speed, acceleration, handling, offroad, engine]
       pickle.dump(dataArray, data)
       data.close()
@@ -1747,7 +1749,7 @@ def verifyName(entry, typ):
       nameCheck = carCreatorProperties["Name"]
    entry.delete(0, END)
    invalidChar = ("<" in nameCheck) or (">" in nameCheck) or (":" in nameCheck) or ("\\" in nameCheck) or ("/" in nameCheck) or ("\"" in nameCheck) or ("|" in nameCheck) or ("?" in nameCheck) or ("*" in nameCheck)
-   location = "UserData/" + username + "/" + typ + "s/"
+   location = USER_DATA_DIR + username + "/" + typ + "s/"
    folder = []
    if typ == "Car":
       folder = getFolderItems(location)
@@ -1764,7 +1766,7 @@ def verifyName(entry, typ):
       return True
    else:
       for item in range(start, len(folder)):
-         if nameCheck + ".txt" == folder[item] and typ == "Level":
+         if nameCheck + EXT_TXT == folder[item] and typ == "Level":
             replace = messagebox.askyesno("Replace Existing Level", "There is already a level with that name\nDo you want to replace that level with this?")
             if replace:
                return False
@@ -1790,12 +1792,12 @@ def verifyName(entry, typ):
             return False
    elif (not nameCheck.startswith(" ")) and (not nameCheck.endswith(" ")) and (invalidChar == False):
       if typ == "Car":
-         os.rename("UserData/" + username + "/Cars/" + oldName, "UserData/" + username + "/Cars/" + nameCheck)
+         os.rename(USER_DATA_DIR + username + CARS_DIR + oldName, USER_DATA_DIR + username + CARS_DIR + nameCheck)
          return False
       else:
          if oldName != "Unnamed Level":
             try:
-               os.rename("UserData/" + username + "/Levels/Code/" + oldName + ".txt", "UserData/" + username + "/Levels/Code/" + nameCheck + ".txt")
+               os.rename(USER_DATA_DIR + username + LEVEL_CODE_DIR + oldName + EXT_TXT, USER_DATA_DIR + username + LEVEL_CODE_DIR + nameCheck + EXT_TXT)
                return False
             except:
                return False
@@ -1832,7 +1834,7 @@ def verifyUserDetails(mode, win, unameBox=None, oldPwordBox=None, pwordBox=None,
    if mode == 1:
       contents = " "
       try:
-        data = open("UserData/" + uname + "/data.bin", "rb")
+        data = open(USER_DATA_DIR + uname + DATA_BIN, "rb")
         contents = pickle.load(data)
       except:
          if uname != "":
@@ -1875,7 +1877,7 @@ def verifyUserDetails(mode, win, unameBox=None, oldPwordBox=None, pwordBox=None,
          elif uname.startswith(" ") or uname.endswith(" ") or invalidChar:
             error = True
             messagebox.showwarning("Error", "The username is invalid\nPlease change the username")
-         location = "UserData/"
+         location = USER_DATA_DIR
          folder = getFolderItems(location)
          for item in range(1, len(folder)):
             if uname.upper() == folder[item].upper() and (uname.upper() != "GUEST" and uname.upper() != "DEFAULT"):
@@ -1883,7 +1885,7 @@ def verifyUserDetails(mode, win, unameBox=None, oldPwordBox=None, pwordBox=None,
                messagebox.showwarning("Error", "This username already exists")
       if mode in [2, 4]:
          if mode == 4:
-           data = open("UserData/" + username + "/data.bin", "rb")
+           data = open(USER_DATA_DIR + username + DATA_BIN, "rb")
            contents = pickle.load(data)
            if oldPword == "":
                error = True
@@ -1922,11 +1924,11 @@ def verifyUserDetails(mode, win, unameBox=None, oldPwordBox=None, pwordBox=None,
          messagebox.showinfo("Username Changed", username + " is now your new username")
          closeTk(win)
       elif mode == 4 and error == False:
-         data = open("UserData/" + username + "/data.bin", "rb")
+         data = open(USER_DATA_DIR + username + DATA_BIN, "rb")
          contents = pickle.load(data)
          data.close()
          contents[0] = pword
-         data = open("UserData/" + username + "/data.bin", "wb")
+         data = open(USER_DATA_DIR + username + DATA_BIN, "wb")
          pickle.dump(contents, data)
          data.close()
          messagebox.showinfo("Password Changed", "You have successfully changed your password")
@@ -1936,16 +1938,16 @@ def createAccount(uname, pword=""):
    global username, menuMode
    if pword == "":
       try:
-         shutil.rmtree("UserData/Guest")
+         shutil.rmtree(GUEST_USER)
       except OSError:
          pass
    try:
-      os.mkdir("UserData/" + uname)
-      os.mkdir("UserData/" + uname + "/Cars")
-      os.mkdir("UserData/" + uname + "/Levels")
-      os.mkdir("UserData/" + uname + "/Levels/Code")
-      os.mkdir("UserData/" + uname + "/Levels/Music")
-      data = open("UserData/" + uname + "/data.bin", "wb")
+      os.mkdir(USER_DATA_DIR + uname)
+      os.mkdir(USER_DATA_DIR + uname + "/Cars")
+      os.mkdir(USER_DATA_DIR + uname + "/Levels")
+      os.mkdir(USER_DATA_DIR + uname + "/Levels/Code")
+      os.mkdir(USER_DATA_DIR + uname + "/Levels/Music")
+      data = open(USER_DATA_DIR + uname + DATA_BIN, "wb")
       dataArray = [pword, "METRIC", 100, 100, 100]
       pickle.dump(dataArray, data)
       data.close()
@@ -2023,7 +2025,7 @@ def addMusic():
       Label(frame, text="Import a WAV soundtrack that will play in the background of your level.\nFor best quality, make sure that the frequency is 48000 Hz.\nFor this to work, the WAV file must be 16-bit or lower.\nThis feature is optional.").grid(row=0, column=0, padx=5, pady=5, columnspan=5)
       importBtn = Button(frame, text="Import Soundtrack", command=lambda:importMusic(win))
       importBtn.grid(row=1, column=0, padx=5, pady=5)
-      location = "UserData/" + username + "/Levels/Music/" + levelCreatorProperties["Name"] + ".wav"
+      location = USER_DATA_DIR + username + LEVEL_MUSIC_DIR + levelCreatorProperties["Name"] + EXT_WAV
       if os.path.exists(location):
          clearBtn = Button(frame, text="Remove Soundtrack", command=lambda:clearMusic(win))
          clearBtn.grid(row=1, column=1, padx=5, pady=5)
@@ -2039,18 +2041,18 @@ def importMusic(win):
    location = filedialog.askopenfilename(title="Select Music Track", filetypes=[("WAVE Files (wav)","*.wav")])
    if location != "":
       try:
-         os.remove("UserData/" + username + "/Levels/Music/" + levelCreatorProperties["Name"] + ".wav")
+         os.remove(USER_DATA_DIR + username + LEVEL_MUSIC_DIR + levelCreatorProperties["Name"] + EXT_WAV)
       except:
          pass
       name = location.split("/")[len(location.split("/")) - 1]
-      shutil.copy(location, "UserData/" + username + "/Levels/Music/")
-      os.rename("UserData/" + username + "/Levels/Music/" + name, "UserData/" + username + "/Levels/Music/" + levelCreatorProperties["Name"] + ".wav")
+      shutil.copy(location, USER_DATA_DIR + username + LEVEL_MUSIC_DIR)
+      os.rename(USER_DATA_DIR + username + LEVEL_MUSIC_DIR + name, USER_DATA_DIR + username + LEVEL_MUSIC_DIR + levelCreatorProperties["Name"] + EXT_WAV)
       closeTk(win)
       addMusic()
 
 def clearMusic(win):
    global levelCreatorProperties, username
-   os.remove("UserData/" + username + "/Levels/Music/" + levelCreatorProperties["Name"] + ".wav")
+   os.remove(USER_DATA_DIR + username + LEVEL_MUSIC_DIR + levelCreatorProperties["Name"] + EXT_WAV)
    closeTk(win)
    addMusic()
    
@@ -2161,9 +2163,9 @@ def verifyCode(code, entry, laps, win):
       else:
          levelCreatorProperties["Code"] = codeList
          saveLevel(codeList, laps)
-         location = "UserData/" + username + "/Levels/Music/"
-         if os.path.exists(location + oldName + ".wav"):
-            os.rename(location + oldName + ".wav", location + levelCreatorProperties["Name"] + ".wav")
+         location = USER_DATA_DIR + username + LEVEL_MUSIC_DIR
+         if os.path.exists(location + oldName + EXT_WAV):
+            os.rename(location + oldName + EXT_WAV, location + levelCreatorProperties["Name"] + EXT_WAV)
          messagebox.showinfo("Level Saved", "Your level has been saved successfully")
          activeGate = 0
          levelCreatorProperties["Undo"] = []
@@ -2173,8 +2175,8 @@ def verifyCode(code, entry, laps, win):
 
 def saveLevel(codeList, laps):
    global username, menuMode, levelCreatorProperties
-   location = "UserData/" + username + "/Levels/Code/"
-   file = open(location + levelCreatorProperties["Name"] + ".txt", "w")
+   location = USER_DATA_DIR + username + LEVEL_CODE_DIR
+   file = open(location + levelCreatorProperties["Name"] + EXT_TXT, "w")
    for position in codeList:
       if position[0] != "tree":
          line = str(position[0] + "," + position[1] + "," + position[2] + "," + position[3] + "," + position[4])
@@ -2275,7 +2277,7 @@ while run:
       if event.type == pyg.QUIT or mode == "QUIT":
          if username in ["Guest", ""]:
             try:
-               shutil.rmtree("UserData/Guest")
+               shutil.rmtree(GUEST_USER)
             except OSError:
                pass
          run = False
@@ -2361,7 +2363,7 @@ while run:
       createTk(mode)
       mode = "PAUSED"      
    elif mode == "CREATE_CAR_DIRECTORY":
-      os.mkdir("UserData/" + username + "/Cars/Unnamed Car/")
+      os.mkdir(USER_DATA_DIR + username + "/Cars/Unnamed Car/")
       editCarCreator = False
       mode = "CAR_CREATOR"
    elif mode == "CAR_CREATOR":
@@ -2450,5 +2452,5 @@ while run:
       mousePos = pyg.mouse.get_pos()  
    clicked = pyg.mouse.get_pressed()
    pyg.display.update()
-   clock.tick(60) #FPS
+   clock.tick(FPS)
 pyg.quit()
