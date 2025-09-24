@@ -21,6 +21,9 @@ def poll_actions(bindings: dict = None):
         if event.type == pygame.QUIT:
             actions.append(("quit", "press", None))
             continue
+        if event.type == pygame.VIDEORESIZE:
+            actions.append(("window_resized", "change", (event.w, event.h)))
+            continue
         if event.type == pygame.MOUSEBUTTONDOWN:
             actions.append(("mouse_down", "press", event.button))
             continue

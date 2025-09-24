@@ -12,6 +12,7 @@ from pygame.locals import*
 from game.config.constants import *
 from game.io.assets import load_image, load_sound, load_font
 from game.io.input import poll_actions
+from game.io.render import init_display, end_frame, get_mouse_pos_logical, get_half_screen, get_logical_size, resize_physical
 
 import pygame as pyg
 
@@ -2279,21 +2280,11 @@ pyg.mixer.Channel(4).set_volume(volume["Sound"] / 100)
 levelProperties, mode = getLevels("Default", mode, load=True)
 if level == 5:
    walls, randomGates = rebuildMaze()
-#ctypes.windll.user32.SetProcessDPIAware()
-#monitor = (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
-monitor = (1920, 1080)
-os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0, 0)
-screen = (1920, 1080)
-halfScreen = (screen[0] / 2, screen[1] / 2)
-if monitor != screen:
-   adjustedHeight = (screen[1] / screen[0]) * monitor[0]
-   newMonitor = (monitor[0], int(adjustedHeight))
-   window = pyg.Surface(screen)
-   render = pyg.display.set_mode(newMonitor, pyg.NOFRAME | pyg.DOUBLEBUF)
-else:
-   window = pyg.display.set_mode(monitor, pyg.NOFRAME | pyg.DOUBLEBUF)
-   newMonitor = screen
-pyg.display.set_caption("Car Mania")
+
+
+window = init_display()
+halfScreen = get_half_screen()
+screen = get_logical_size()
 clock = pyg.time.Clock()
 mousePos = pyg.mouse.get_pos()
 clicked = pyg.mouse.get_pressed()
@@ -2302,6 +2293,9 @@ timer = pyg.time.Clock()
 
 while run:
    actions = poll_actions()
+   for name, phase, payload in actions:
+        if name == "window_resized" and phase == "change":
+            resize_physical(payload)
    quit_requested, mouse_state = apply_actions_to_key(actions, key)
    if mouse_state is True:
       mouseDown = True
@@ -2425,15 +2419,8 @@ while run:
       mode = CMD_PLAY_GAME
    elif mode == "WIN":
       finishedLevel(window, camera, mode)
-   if monitor != (1920, 1080):
-      scale = pyg.transform.scale(window, newMonitor)
-      scaleNum = (1920 / newMonitor[0], 1080 / newMonitor[1])
-      mp = pyg.mouse.get_pos()
-      mousePos = (mp[0] * scaleNum[0], mp[1] * scaleNum[1])
-      render.blit(scale, (0, 0))
-   else:
-      mousePos = pyg.mouse.get_pos()  
+   mousePos = get_mouse_pos_logical()
    clicked = pyg.mouse.get_pressed()
-   pyg.display.update()
+   end_frame()
    clock.tick(FPS)
 pyg.quit()
