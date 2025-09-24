@@ -1,5 +1,5 @@
 # Time / framerate
-FPS = 60
+TARGET_FPS = 60
 MS_PER_SECOND = 1000
 SECONDS_PER_MINUTE = 60
 

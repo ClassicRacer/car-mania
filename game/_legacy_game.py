@@ -16,6 +16,9 @@ from game.io.render import init_display, end_frame, get_mouse_pos_logical, get_h
 
 import pygame as pyg
 
+_booted = False
+_run = True
+
 class createSprite(pyg.sprite.Sprite):
    def __init__(self, x, y, carRotate=None, image=None):
       super().__init__()
@@ -76,13 +79,14 @@ def invertCol(red, green, blue):
       return 255, 255, 255
    
 def getFont(size, for_tk=False):
-    key = (size, for_tk)
-    if key not in _font_cache:
-        if for_tk:
-            _font_cache[key] = tkFont.Font(family="Arial", size=size)
-        else:
-            _font_cache[key] = load_font("font.ttf", size)
-    return _font_cache[key]
+   global _font_cache
+   key = (size, for_tk)
+   if key not in _font_cache:
+      if for_tk:
+         _font_cache[key] = tkFont.Font(family="Arial", size=size)
+      else:
+         _font_cache[key] = load_font("font.ttf", size)
+   return _font_cache[key]
 
 def mainMenu(win, level, cam):
    global menuMode
@@ -2243,12 +2247,12 @@ run = True
 key = {DIR_UP : False, DIR_DOWN : False, DIR_LEFT : False, DIR_RIGHT : False, "Space" : False, "Enter" : False, "Escape" : False, KEY_W : False, KEY_A : False, KEY_S : False, KEY_D : False}
 mode = STATE_MAIN_MENU
 menuMode = STATE_TITLE
-pieces = getPcs()
+pieces = []
 username = ""
 units = "METRIC"
 volume = {"Music" : 100, "Sound" : 100, "Engine" : 100}
-level = randint(1, 5)
-car = randint(0, 7)
+level = 1
+car = 0
 carProperties, mode, car = getCars("Default", mode, car, load=True)
 currentLap = 1
 activeGate = 0
@@ -2267,31 +2271,53 @@ levelCreatorProperties["Code"][0] = ["road", 1, 0, 0, 0]
 pausedVelocity = 0
 enginePitch = 0
 randomGates = []
-
-pyg.mixer.init(48000, -16, 2, 4096)
-pyg.init()
+screen = None
+halfScreen = (0, 0)
+mousePos = (0, 0)
+clicked = (False, False, False)
+sounds, engines = {}, {}
 _font_cache = {}
-sounds, engines = getSounds()
-pyg.mixer.Channel(0).set_volume(volume["Sound"] / 100)
-pyg.mixer.Channel(1).set_volume(volume["Engine"] / 100)
-pyg.mixer.Channel(2).set_volume(volume["Music"] / 100)
-pyg.mixer.Channel(3).set_volume(volume["Sound"] / 100)
-pyg.mixer.Channel(4).set_volume(volume["Sound"] / 100)
-levelProperties, mode = getLevels("Default", mode, load=True)
-if level == 5:
-   walls, randomGates = rebuildMaze()
 
 
-window = init_display()
-halfScreen = get_half_screen()
-screen = get_logical_size()
-clock = pyg.time.Clock()
-mousePos = pyg.mouse.get_pos()
-clicked = pyg.mouse.get_pressed()
-resetLevel(level)
-timer = pyg.time.Clock()
+def bootstrap(scr):
+   global window, clock, timer
+   global mode, menuMode, pieces, username, units, volume
+   global level, car, carProperties, currentLap, activeGate, gatesCleared, gateSprites
+   global camera, carPos, velocity, angle, time, quitCarCreator, editCarCreator
+   global carCreatorProperties, levelCreatorProperties, pausedVelocity, enginePitch, randomGates
+   global levelProperties, walls
+   global sounds, engines
+   global screen, halfScreen, mousePos, clicked
 
-while run:
+   import random
+   import pygame as pyg
+
+   pyg.mixer.init(48000, -16, 2, 4096)
+   pyg.init()
+   sounds, engines = getSounds()
+   pyg.mixer.Channel(0).set_volume(volume["Sound"] / 100)
+   pyg.mixer.Channel(1).set_volume(volume["Engine"] / 100)
+   pyg.mixer.Channel(2).set_volume(volume["Music"] / 100)
+   pyg.mixer.Channel(3).set_volume(volume["Sound"] / 100)
+   pyg.mixer.Channel(4).set_volume(volume["Sound"] / 100)
+   level = random.randint(1, 5)
+   car = random.randint(0, 7)
+   pieces = getPcs()
+   levelProperties, mode = getLevels("Default", mode, load=True)
+   if level == 5:
+      walls, randomGates = rebuildMaze()
+
+   window = scr
+   halfScreen = get_half_screen()
+   screen = get_logical_size()
+   clock = pyg.time.Clock()
+   resetLevel(level)
+   timer = pyg.time.Clock()
+   _booted = True
+
+def update(dt):
+   global mousePos, clicked, mouseDown, _run, run, mouseDown, mode, username, volume, timer, velocity, pausedVelocity, enginePitch, level
+   from game.io.render import get_mouse_pos_logical, resize_physical
    actions = poll_actions()
    for name, phase, payload in actions:
         if name == "window_resized" and phase == "change":
@@ -2301,13 +2327,16 @@ while run:
       mouseDown = True
    elif mouse_state is False:
       mouseDown = False
+   mousePos = get_mouse_pos_logical()
+   clicked = pyg.mouse.get_pressed()
    if quit_requested or mode == CMD_QUIT:
       if username in ["Guest", ""]:
          try:
             shutil.rmtree(GUEST_USER)
          except OSError:
             pass
-      run = False   
+      _run = False
+      return False  
    if mode == STATE_MAIN_MENU:
        if menuMode == STATE_TITLE:
           username = ""
@@ -2419,8 +2448,11 @@ while run:
       mode = CMD_PLAY_GAME
    elif mode == "WIN":
       finishedLevel(window, camera, mode)
-   mousePos = get_mouse_pos_logical()
-   clicked = pyg.mouse.get_pressed()
+   return True
+
+def render(screen):
    end_frame()
-   clock.tick(FPS)
-pyg.quit()
+
+def shutdown():
+    import pygame as pyg
+    pyg.quit()
