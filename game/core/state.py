@@ -26,6 +26,7 @@ class Game:
         self.current.enter(self.ctx)
     def update(self, dt):
         '''Forward to the current screen'''
+        self.ctx.pop("_actions_cache", None)
         if not self.current:
             return False
         if not self.current.update(self.ctx, dt):

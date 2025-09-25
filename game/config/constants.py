@@ -29,6 +29,7 @@ ENGINE_SFX_DIR = "engine/"
 GUEST_USER = "UserData/Guest"
 FONT_FILE = "font.ttf"
 ICON_FONT_FILE = "icons.ttf"
+DB_FILE = "carmania.db"
 
 # New paths
 
