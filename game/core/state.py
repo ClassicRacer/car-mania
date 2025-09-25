@@ -16,11 +16,13 @@ class Game:
     def __init__(self, ctx):
         self.ctx = ctx
         self.current = None
+        self.ctx.setdefault("screen_seq", 0)
     def set(self, screen):
         '''Cleanly switches screens by calling exit() on the old one and enter() on the new one'''
         if self.current:
             self.current.exit(self.ctx)
         self.current = screen
+        self.ctx["screen_seq"] += 1
         self.current.enter(self.ctx)
     def update(self, dt):
         '''Forward to the current screen'''
