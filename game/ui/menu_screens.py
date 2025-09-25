@@ -82,7 +82,7 @@ class MenuScreen(Screen):
 
 def main_menu(game):
     return MenuScreen("Car Mania", [
-        ("Play",     lambda ctx: ctx["game"].set(CarSelectScreen(on_back=lambda ctx: ctx["game"].set(main_menu(game))))),
+        ("Play",     lambda ctx: ctx["game"].set(CarSelectScreen(back_action=lambda ctx: ctx["game"].set(main_menu(game))))),
         ("Create",   lambda ctx: ctx["game"].set(create_menu(game))),
         ("Options",  None),
         ("Quit",     lambda ctx: ctx.update({"quit": True})),

@@ -5,12 +5,15 @@ from game.ui.menu_screens import main_menu
 from game.ui.widgets import make_back_draw
 from game.io.assets import load_font
 from game.io.input import poll_actions
-from game.config.constants import FONT_FILE, ICON_FONT_FILE
+from game.config.constants import FONT_FILE, ICON_FONT_FILE, DB_FILE
+from game.data.store import open_db
+
 import os, pygame
 
 def main():
     os.environ["SDL_MOUSE_FOCUS_CLICKTHROUGH"] = "1"
     pygame.init()
+    db = open_db(DB_FILE)
     window = init_display()
     ui_font = load_font(FONT_FILE, 36)
     title_font = load_font(FONT_FILE, 100)
@@ -20,7 +23,9 @@ def main():
         "fonts": {"ui": ui_font, "title": title_font, "icon": icon_font},
         "back_button_draw": make_back_draw(icon_font, ui_font),
         "poll_actions": poll_actions,
-        "get_mouse_pos": get_mouse_pos_logical
+        "get_mouse_pos": get_mouse_pos_logical,
+        "db": db,
+        "profile_id": 1,
     }
     game = Game(ctx)
     ctx["game"] = game

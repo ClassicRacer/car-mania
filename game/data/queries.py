@@ -2,7 +2,7 @@ import sqlite3
 
 def fetch_cars(conn, profile_id):
     cur = conn.execute(
-        """SELECT id,name,image_path,image_relpath,display_order
+        """SELECT id,name,image_path,display_order
            FROM cars
            WHERE profile_id=?
            ORDER BY display_order, id""",
