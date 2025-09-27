@@ -1,15 +1,40 @@
 import pygame
 
 class Button:
-    def __init__(self, rect, text, font, fg, bg, hover):
+    def __init__(self, rect, text, font, fg, bg, hover, callback=None):
         self.rect = pygame.Rect(rect)
         self.text = text
         self.font = font
         self.fg = fg
         self.bg = bg
         self.hover = hover
+        self.callback = callback
         self._surf = None
         self._pos = None
+        self._down = False
+        self._seq = 0
+
+    def set_rect(self, rect):
+        self.rect = pygame.Rect(rect)
+        self._pos = None
+
+    def enter(self, ctx):
+        self._seq = ctx["screen_seq"]
+        self._down = False
+
+    def update(self, ctx, actions):
+        for name, phase, payload in actions:
+            if name == "mouse_down" and phase == "press" and payload == 1 and not self._down:
+                mp = ctx["get_mouse_pos"]()
+                if self.rect.collidepoint(mp):
+                    self._down = True
+            if name == "mouse_up" and phase == "release" and payload == 1:
+                mp = ctx["get_mouse_pos"]()
+                if self._down and ctx["screen_seq"] == self._seq and self.rect.collidepoint(mp):
+                    self._down = False
+                    return True
+                self._down = False
+        return False
 
     def draw(self, surface, mouse_pos):
         m = self.rect.collidepoint(mouse_pos)
@@ -17,12 +42,19 @@ class Button:
         pygame.draw.rect(surface, color, self.rect, border_radius=8)
         if not self._surf:
             self._surf = self.font.render(self.text, True, self.fg)
+        if self._pos is None:
             self._pos = self._surf.get_rect(center=self.rect.center)
         surface.blit(self._surf, self._pos)
-        return m
     
     def clicked(self, mouse_pos, mouse_clicked):
         return self.rect.collidepoint(mouse_pos) and mouse_clicked
+    
+def layout_column(center_x, top_y, size, spacing, buttons):
+    w, h = size
+    for i, b in enumerate(buttons):
+        x = center_x - w // 2
+        y = int(top_y + i * (h + spacing))
+        b.set_rect((x, y, w, h))
     
 import pygame
 

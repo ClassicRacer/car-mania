@@ -2,7 +2,7 @@ from game.io.render import get_mouse_pos_logical, init_display
 from game.core.loop import run
 from game.core.state import Game
 from game.ui.menu_screens import main_menu
-from game.ui.widgets import make_back_draw
+from game.ui.widgets.button import make_back_draw
 from game.io.assets import load_font
 from game.io.input import poll_actions
 from game.config.constants import FONT_FILE, ICON_FONT_FILE, DB_FILE
@@ -26,6 +26,7 @@ def main():
         "get_mouse_pos": get_mouse_pos_logical,
         "db": db,
         "profile_id": 1,
+        "selected_car_id": -1,
     }
     game = Game(ctx)
     ctx["game"] = game
