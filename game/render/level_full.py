@@ -91,12 +91,10 @@ class LevelFullRenderer:
         self.pieces = pieces
         self.margin = margin_px
         self.hud_h = hud_h
-        self._cache = {}  # level_id -> {"world":surf, "bounds":rect, "bg":(r,g,b)}
+        self._cache = {}
 
     def _build_world(self, level_row):
-        # Parse and measure
         roads, trees, gates = _parse(level_row["code"])
-        # Compute bounds using unrotated piece sizes (same as your preview)
         pts = []
         def add_rect(w,h,x,y):
             pts.append((x,y)); pts.append((x+w, y+h))
@@ -118,12 +116,10 @@ class LevelFullRenderer:
             bounds.width  = max(xs) - bounds.x or 1
             bounds.height = max(ys) - bounds.y or 1
 
-        # Bake level to a world surface at native resolution
         world = pygame.Surface((bounds.w, bounds.h), pygame.SRCALPHA).convert_alpha()
         bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
         world.fill((0,0,0,0))
 
-        # Blit all pieces *unrotated* at native scale, offset by -bounds.topleft
         ox, oy = -bounds.x, -bounds.y
         for t,x,y,ang in roads:
             img = self.pieces.get(f"road_{t}")
@@ -145,8 +141,17 @@ class LevelFullRenderer:
         entry = self._cache.get(lid)
         if entry is None:
             world, bounds, bg = self._build_world(level_row)
-            entry = {"world": world, "bounds": bounds, "bg": bg}
+            entry = {
+                "world": world,
+                "bounds": bounds,
+                "bg": bg,
+                "scaled_surface": None,
+                "scaled_size": None,
+            }
             self._cache[lid] = entry
+        elif "scaled_surface" not in entry:
+            entry["scaled_surface"] = None
+            entry["scaled_size"] = None
         return entry
 
     def render_to(self, target_surface, level_row, camera=None):
@@ -167,17 +172,39 @@ class LevelFullRenderer:
         pivot = (tw // 2, th // 2)
         zoom = base_scale * camera.zoom
 
+        # Cache the expensive smoothscale so we only redo it when the zoom size changes.
+        target_scaled_size = (max(1, int(round(ww * zoom))), max(1, int(round(wh * zoom))))
+        if entry["scaled_size"] != target_scaled_size:
+            if target_scaled_size == (ww, wh):
+                scaled = world
+            else:
+                scaled = pygame.transform.smoothscale(world, target_scaled_size)
+            entry["scaled_surface"] = scaled
+            entry["scaled_size"] = target_scaled_size
+        else:
+            scaled = entry["scaled_surface"] or world
+
+        target_surface.fill(bg)
+
+        angle = camera.rot_deg % 360.0
+        if angle <= 1e-3 or angle >= 360.0 - 1e-3:
+            top_left = (
+                int(round(pivot[0] - camera.x * zoom)),
+                int(round(pivot[1] - camera.y * zoom)),
+            )
+            target_surface.blit(scaled, top_left)
+            return
+
         diag = int(math.ceil(math.hypot(tw, th)))
         canvas = pygame.Surface((diag, diag), pygame.SRCALPHA).convert_alpha()
         canvas.fill((0, 0, 0, 0))
 
-        scaled = pygame.transform.smoothscale(world, (max(1, int(ww*zoom)), max(1, int(wh*zoom))))
-
-        cxc, cyc = diag // 2, diag // 2
-        top_left = (cxc - camera.x * zoom, cyc - camera.y * zoom)
+        cxc = cyc = diag // 2
+        top_left = (
+            int(round(cxc - camera.x * zoom)),
+            int(round(cyc - camera.y * zoom)),
+        )
         canvas.blit(scaled, top_left)
 
-        rotated = pygame.transform.rotate(canvas, camera.rot_deg)
-
-        target_surface.fill(bg)
+        rotated = pygame.transform.rotate(canvas, angle)
         target_surface.blit(rotated, rotated.get_rect(center=pivot))
