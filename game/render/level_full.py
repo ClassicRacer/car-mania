@@ -121,7 +121,7 @@ class LevelFullRenderer:
         # Bake level to a world surface at native resolution
         world = pygame.Surface((bounds.w, bounds.h), pygame.SRCALPHA).convert_alpha()
         bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
-        world.fill(bg)
+        world.fill((0,0,0,0))
 
         # Blit all pieces *unrotated* at native scale, offset by -bounds.topleft
         ox, oy = -bounds.x, -bounds.y
