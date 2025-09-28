@@ -86,36 +86,135 @@ def _blit_transformed(surf, img, base_scale, cam, ang, x, y, surf_center):
     rect.topleft = (int(sx), int(sy))
     surf.blit(img, rect)
 
+# class LevelFullRenderer:
+#     def __init__(self, pieces, margin_px=40, hud_h=240):
+#         self.pieces = pieces
+#         self.margin = margin_px
+#         self.hud_h = hud_h
+        
+#     def render_to(self, target_surface, level_row, camera=None):
+#         code = level_row["code"]
+#         roads, trees, gates = _parse(code)
+#         bounds = _bounds(self.pieces, roads, trees, gates)
+#         tw, th = target_surface.get_size()
+#         avail_w = max(1, tw - self.margin*2)
+#         avail_h = max(1, th - self.margin*2 - self.hud_h)
+#         sx = avail_w / max(1, bounds.width)
+#         sy = avail_h / max(1, bounds.height)
+#         base_scale = min(sx, sy)
+#         cx, cy = tw//2, self.margin + int((avail_h)*0.5) + 80
+#         target_surface.fill((int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"])))
+#         if camera is None:
+#             camera = Camera2D()
+#             camera.fit_to_bounds((tw, th), bounds, self.margin, self.hud_h)
+#         for typ, x, y, ang in roads:
+#             img = self.pieces.get(f"road_{typ}")
+#             if img:
+#                 _blit_transformed(target_surface, img, base_scale, camera, ang, x, y, (cx, cy))
+#         for order, x, y, ang in gates:
+#             img = self.pieces.get("gate")
+#             if img:
+#                 _blit_transformed(target_surface, img, base_scale, camera, ang, x, y, (cx, cy))
+#         for typ, x, y in trees:
+#             img = self.pieces.get(f"tree_{typ}")
+#             if img:
+#                 _blit_transformed(target_surface, img, base_scale, camera, 0, x, y, (cx, cy))
+
 class LevelFullRenderer:
     def __init__(self, pieces, margin_px=40, hud_h=240):
         self.pieces = pieces
         self.margin = margin_px
         self.hud_h = hud_h
-        
-    def render_to(self, target_surface, level_row, camera=None):
-        code = level_row["code"]
-        roads, trees, gates = _parse(code)
-        bounds = _bounds(self.pieces, roads, trees, gates)
-        tw, th = target_surface.get_size()
-        avail_w = max(1, tw - self.margin*2)
-        avail_h = max(1, th - self.margin*2 - self.hud_h)
-        sx = avail_w / max(1, bounds.width)
-        sy = avail_h / max(1, bounds.height)
-        base_scale = min(sx, sy)
-        cx, cy = tw//2, self.margin + int((avail_h)*0.5) + 80
-        target_surface.fill((int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"])))
-        if camera is None:
-            camera = Camera2D()
-            camera.fit_to_bounds((tw, th), bounds, self.margin, self.hud_h)
-        for typ, x, y, ang in roads:
-            img = self.pieces.get(f"road_{typ}")
+        self._cache = {}  # level_id -> {"world":surf, "bounds":rect, "bg":(r,g,b)}
+
+    def _build_world(self, level_row):
+        # Parse and measure
+        roads, trees, gates = _parse(level_row["code"])
+        # Compute bounds using unrotated piece sizes (same as your preview)
+        pts = []
+        def add_rect(w,h,x,y):
+            pts.append((x,y)); pts.append((x+w, y+h))
+        for t,x,y,ang in roads:
+            img = self.pieces.get(f"road_{t}"); 
+            if img: add_rect(*img.get_size(), x, y)
+        for t,x,y in trees:
+            img = self.pieces.get(f"tree_{t}");
+            if img: add_rect(*img.get_size(), x, y)
+        for _,x,y,ang in gates:
+            img = self.pieces.get("gate");
+            if img: add_rect(*img.get_size(), x, y)
+
+        if not pts:
+            bounds = pygame.Rect(0,0,1,1)
+        else:
+            xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+            bounds = pygame.Rect(min(xs), min(ys), 1, 1)
+            bounds.width  = max(xs) - bounds.x or 1
+            bounds.height = max(ys) - bounds.y or 1
+
+        # Bake level to a world surface at native resolution
+        world = pygame.Surface((bounds.w, bounds.h), pygame.SRCALPHA).convert_alpha()
+        bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
+        world.fill(bg)
+
+        # Blit all pieces *unrotated* at native scale, offset by -bounds.topleft
+        ox, oy = -bounds.x, -bounds.y
+        for t,x,y,ang in roads:
+            img = self.pieces.get(f"road_{t}")
             if img:
-                _blit_transformed(target_surface, img, base_scale, camera, ang, x, y, (cx, cy))
-        for order, x, y, ang in gates:
+                world.blit(pygame.transform.rotate(img, ang), (x+ox, y+oy))
+        for order,x,y,ang in gates:
             img = self.pieces.get("gate")
             if img:
-                _blit_transformed(target_surface, img, base_scale, camera, ang, x, y, (cx, cy))
-        for typ, x, y in trees:
-            img = self.pieces.get(f"tree_{typ}")
+                world.blit(pygame.transform.rotate(img, ang), (x+ox, y+oy))
+        for t,x,y in trees:
+            img = self.pieces.get(f"tree_{t}")
             if img:
-                _blit_transformed(target_surface, img, base_scale, camera, 0, x, y, (cx, cy))
+                world.blit(img, (x+ox, y+oy))
+
+        return world, bounds, bg
+
+    def _get_world(self, level_row):
+        lid = level_row.get("id", None)
+        entry = self._cache.get(lid)
+        if entry is None:
+            world, bounds, bg = self._build_world(level_row)
+            entry = {"world": world, "bounds": bounds, "bg": bg}
+            self._cache[lid] = entry
+        return entry
+
+    def render_to(self, target_surface, level_row, camera=None):
+        tw, th = target_surface.get_size()
+        entry = self._get_world(level_row)
+        world = entry["world"]; bg = entry["bg"]
+
+        # Clear screen
+        target_surface.fill(bg)
+
+        # Compute base fit (to leave margin + HUD area)
+        avail_w = max(1, tw - self.margin*2)
+        avail_h = max(1, th - self.margin*2 - self.hud_h)
+        sx = avail_w / world.get_width()
+        sy = avail_h / world.get_height()
+        base_scale = min(sx, sy)
+
+        # Camera defaults
+        if camera is None:
+            camera = Camera2D(x=world.get_width()/2, y=world.get_height()/2, zoom=1.0, rot_deg=0.0)
+
+        # Apply one transform to the whole world
+        zoom = base_scale * camera.zoom
+        rotated = pygame.transform.rotozoom(world, camera.rot_deg, zoom)
+
+        # Place it so the camera’s world center is at the screen center (top area reserved for title)
+        cx, cy = tw//2, self.margin + int(avail_h*0.5) + 80
+        # Where would the camera center appear in the rotated image?
+        # After rotozoom, the top-left of `rotated` corresponds to world (0,0).
+        # We want world (camera.x, camera.y) to land at (cx, cy).
+        # So shift by -(camera.x*zoom, camera.y*zoom) plus half rotated dims.
+        rx, ry = rotated.get_size()
+        # Build a rect whose center maps the camera center to (cx, cy)
+        rect = rotated.get_rect(center=(cx - (camera.x - world.get_width()/2)*zoom,
+                                        cy - (camera.y - world.get_height()/2)*zoom))
+
+        target_surface.blit(rotated, rect)

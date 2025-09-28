@@ -3,7 +3,7 @@ from game.config.constants import FONT_FILE
 from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.level_preview import LevelPreviewRenderer
-from game.render.level_full import LevelFullRenderer
+from game.render.level_full import Camera2D, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
 from game.ui.widgets.button import BackControl, Button
 from game.data.queries import fetch_levels
@@ -19,7 +19,7 @@ class LevelSelectScreen(BaseScreen):
         self.continue_button = None
         self.continue_action = continue_action
         self.thumb_size = thumb_size
-        self.camera = (0,0)
+        self.camera = None
         self.margin = margin
         self.rotation = 0
 
@@ -37,6 +37,9 @@ class LevelSelectScreen(BaseScreen):
             self.selected_level = random.randint(0, len(self.levels)-1) if self.levels else 0
         else:
             self.selected_level = ctx["selected_level_id"]
+        self.camera = Camera2D()
+        if self.levels:
+            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera)
 
     def _continue(self, ctx):
         if self.levels:
@@ -51,19 +54,53 @@ class LevelSelectScreen(BaseScreen):
             return False
         mp = ctx["get_mouse_pos"]()
         for name, phase, payload in actions:
-            if name == "enter" and phase == "press":
-                #self._continue(ctx)
-                self.selected_level = (self.selected_level + 1) % len(self.levels) if self.levels else 0
             if name == "right" and phase == "press":
-                self.camera = (self.camera[0] - 100, self.camera[1])
-                #self.selected_level = (self.selected_level + 1) % len(self.levels) if self.levels else 0
-            if name == "left" and phase == "press":
-                self.camera = (self.camera[0] + 100, self.camera[1])
-                #self.selected_level = (self.selected_level - 1) % len(self.levels) if self.levels else 0
-            if name == "down" and phase == "press":
-                self.camera = (self.camera[0], self.camera[1] - 100)
-            if name == "up" and phase == "press":
-                self.camera = (self.camera[0], self.camera[1] + 100)
+                pass
+                # if self.levels:
+                #     self.selected_level = (self.selected_level + 1) % len(self.levels)
+                #     # Re-fit camera when level changes
+                #     self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], camera=self.camera)
+            elif name == "left" and phase == "press":
+                pass
+                # if self.levels:
+                #     self.selected_level = (self.selected_level - 1) % len(self.levels)
+                #     self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], camera=self.camera)
+            elif name == "enter" and phase == "press":
+                # self._continue(ctx)
+                self.selected_level = (self.selected_level + 1) % len(self.levels)
+            elif name == "window_resized" and phase == "change":
+                if self.levels:
+                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], camera=self.camera)
+        if self.camera:
+            PAN_SPEED  = 600.0
+            ZOOM_RATE  = 1.5
+            ROT_SPEED  = 90.0
+            MIN_ZOOM   = 0.05
+            MAX_ZOOM   = 5.0
+
+            pressed = pygame.key.get_pressed()
+            if pressed[pygame.K_UP]:
+                self.camera.y -= PAN_SPEED * dt
+            if pressed[pygame.K_DOWN]:
+                self.camera.y += PAN_SPEED * dt
+            if pressed[pygame.K_LEFT]:
+                self.camera.x -= PAN_SPEED * dt
+            if pressed[pygame.K_RIGHT]:
+                self.camera.x += PAN_SPEED * dt
+
+            if pressed[pygame.K_MINUS]:
+                self.camera.zoom /= (1.0 + ZOOM_RATE * dt)
+            if pressed[pygame.K_EQUALS]:
+                self.camera.zoom *= (1.0 + ZOOM_RATE * dt)
+
+            if pressed[pygame.K_q]:
+                self.camera.rot_deg -= ROT_SPEED * dt
+            if pressed[pygame.K_e]:
+                self.camera.rot_deg += ROT_SPEED * dt
+
+            self.camera.zoom = max(MIN_ZOOM, min(MAX_ZOOM, self.camera.zoom))
+            self.camera.rot_deg %= 360.0
+
         if self.continue_button.update(ctx, actions):
             self._continue(ctx)
         if self.handle_back(ctx, actions):
@@ -78,10 +115,8 @@ class LevelSelectScreen(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.levels:
-            self.full_renderer.render_to(surf, self.levels[self.selected_level])
-            name = self.levels[self.selected_level]["name"]
-            laps = self.levels[self.selected_level]["laps"]
-            line = self.font.render(f"{name}  •  Laps: {laps}", True, (255,255,255))
+            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera)
+            line = self.font.render(f"{self.levels[self.selected_level]["name"]}", True, (255,255,255))
             surf.blit(line, line.get_rect(center=(half_W, 190)))
 
         title = self.title_font.render("Select Level", True, (255, 255, 255))
