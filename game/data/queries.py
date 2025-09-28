@@ -38,3 +38,17 @@ def get_max_stats(conn, profile_id):
         "max_handling": 0,
         "max_offroad": 0
     }
+
+def fetch_levels(conn: sqlite3.Connection, profile_id: int):
+    cur = conn.execute(
+        """SELECT id,name,code,ground_r,ground_g,ground_b,laps,music_path,display_order
+           FROM levels
+           WHERE profile_id=?
+           ORDER BY display_order,id""",
+        (profile_id,),
+    )
+    return _rowdicts(cur)
+
+def _rowdicts(cur):
+    cols = [c[0] for c in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
