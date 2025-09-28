@@ -1,6 +1,5 @@
 import pygame
 from game.io.render import get_half_screen, end_frame
-from game.io.render import resize_physical
 from game.ui.level_select import LevelSelectScreen
 from game.ui.widgets.button import Button, layout_column, poll_actions_cached
 from game.config.constants import FONT_FILE, ICON_FONT_FILE

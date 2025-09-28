@@ -1,4 +1,5 @@
 import math
+import random
 import pygame
 from game.config.constants import FONT_FILE
 from game.io.assets import load_font
@@ -29,6 +30,19 @@ class CameraTour:
         self.level_center = pygame.Vector2(0.0, 0.0)
         self.origin = pygame.Vector2(0.0, 0.0)
         self.index = 0
+        self.ROTATE_SPEED = 20.0
+        self.ROTATE_EPS = 0.5
+        self._zoom_out_start_zoom = 1.0
+        self._zoom_out_start_rot = 0.0
+        self._zoom_out_start_pos = pygame.Vector2(0.0, 0.0)
+        self._origin_start_pos = pygame.Vector2(0.0, 0.0)
+        self._origin_target_pos = pygame.Vector2(0.0, 0.0)
+        self._origin_start_zoom = 1.0
+        self._origin_target_zoom = 1.0
+        self._origin_duration = 0.0
+        self._origin_progress = 0.0
+        self._rotation_dir = 1
+        self._zoom_out_end_rot = 0.0
 
     def load_level(self, level_row: dict):
         if not level_row:
@@ -62,28 +76,43 @@ class CameraTour:
         self.index = 0
         self.camera.rot_deg = 0.0
         self.camera.zoom = 1.0
+        self._zoom_out_start_zoom = self.camera.zoom
+        self._zoom_out_start_rot = 0.0
+        self._zoom_out_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+        self._origin_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+        self._origin_target_pos = self.origin.copy()
+        self._origin_start_zoom = self.camera.zoom
+        self._origin_target_zoom = self.ZOOM_IN_FACTOR
+        self._origin_duration = 0.0
+        self._origin_progress = 0.0
 
     def update(self, dt: float):
+        if self.state not in ["idle", "wait", "zoom_out"]:
+            self.camera.rot_deg = (self.camera.rot_deg + self._rotation_dir * self.ROTATE_SPEED * dt) % 360.0
+
         if self.state == "idle":
             return
 
         if self.state == "wait":
             self.timer -= dt
             if self.timer <= 0.0:
-                self.state = "origin"
-            return
+                self._begin_origin_move()
+            else:
+                return
 
         if self.state == "origin":
-            pos_done = self._approach_position(self.origin, dt)
-            zoom_done = self._approach_zoom(self.ZOOM_IN_FACTOR, dt)
-            if pos_done and zoom_done:
+            done = self._update_origin_motion(dt)
+            if done:
                 self.index = 0
-                self.state = "gates" if self.gate_points else "zoom_out"
+                if self.gate_points:
+                    self.state = "gates"
+                else:
+                    self._begin_zoom_out()
             return
 
         if self.state == "gates":
             if not self.gate_points:
-                self.state = "zoom_out"
+                self._begin_zoom_out()
                 return
             target = self.gate_points[self.index]
             reached = self._approach_position(target, dt)
@@ -91,16 +120,21 @@ class CameraTour:
             if reached:
                 self.index += 1
                 if self.index >= len(self.gate_points):
-                    self.state = "zoom_out"
+                    self._begin_zoom_out()
             return
 
         if self.state == "zoom_out":
-            pos_done = self._approach_position(self.level_center, dt)
             zoom_done = self._approach_zoom(1.0, dt)
-            if pos_done and zoom_done:
+            position_done = self._update_zoom_out_position()
+            rotation_done = self._update_zoom_out_rotation()
+            if position_done and zoom_done and rotation_done:
                 self.state = "wait"
                 self.timer = self.WAIT_DURATION
                 self.index = 0
+                self._zoom_out_start_zoom = self.camera.zoom
+                self._zoom_out_start_rot = 0.0
+                self._zoom_out_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+            return
 
     def _approach_position(self, target: pygame.Vector2, dt: float) -> bool:
         current = pygame.Vector2(self.camera.x, self.camera.y)
@@ -135,6 +169,70 @@ class CameraTour:
 
     def _clamp_zoom(self, value: float) -> float:
         return max(self.MIN_ZOOM, min(self.MAX_ZOOM, value))
+
+    def _begin_origin_move(self) -> None:
+        self._origin_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+        self._origin_target_pos = self.origin.copy()
+        self._origin_start_zoom = self.camera.zoom
+        self._origin_target_zoom = self.ZOOM_IN_FACTOR
+        dist = self._origin_start_pos.distance_to(self._origin_target_pos)
+        move_duration = dist / self.PAN_SPEED if self.PAN_SPEED > 1e-6 else 0.0
+        zoom_delta = abs(self._origin_target_zoom - self._origin_start_zoom)
+        zoom_duration = zoom_delta / self.ZOOM_SPEED if self.ZOOM_SPEED > 1e-6 else 0.0
+        self._origin_duration = max(move_duration, zoom_duration, 1e-6)
+        self._origin_progress = 0.0
+        self._rotation_dir = random.choice((-1, 1))
+        self.state = "origin"
+
+    def _update_origin_motion(self, dt: float) -> bool:
+        if self._origin_duration <= 1e-6:
+            self.camera.x, self.camera.y = self._origin_target_pos.x, self._origin_target_pos.y
+            self.camera.zoom = self._origin_target_zoom
+            return True
+
+        self._origin_progress = min(1.0, self._origin_progress + dt / self._origin_duration)
+        t = self._origin_progress
+        pos = self._origin_start_pos.lerp(self._origin_target_pos, t)
+        self.camera.x, self.camera.y = pos.x, pos.y
+        self.camera.zoom = self._origin_start_zoom + (self._origin_target_zoom - self._origin_start_zoom) * t
+        return self._origin_progress >= 0.999
+
+    def _begin_zoom_out(self) -> None:
+        self._zoom_out_start_zoom = self.camera.zoom
+        start_angle = self.camera.rot_deg % 360.0
+        self._zoom_out_start_rot = start_angle
+        self._zoom_out_end_rot = 0.0 if start_angle <= 180.0 else 360.0
+        self._zoom_out_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+        self.state = "zoom_out"
+
+    def _update_zoom_out_rotation(self) -> bool:
+        progress = self._zoom_out_progress()
+        if progress is None:
+            angle = self._zoom_out_end_rot
+        else:
+            angle = self._zoom_out_end_rot + (self._zoom_out_start_rot - self._zoom_out_end_rot) * progress
+        angle %= 360.0
+        self.camera.rot_deg = angle
+        return min(angle, 360.0 - angle) <= self.ROTATE_EPS
+
+    def _update_zoom_out_position(self) -> bool:
+        progress = self._zoom_out_progress()
+        if progress is None:
+            target = self.level_center
+        else:
+            t = 1.0 - progress
+            target = self._zoom_out_start_pos.lerp(self.level_center, t)
+        self.camera.x, self.camera.y = target.x, target.y
+        return target.distance_to(self.level_center) <= self.POSITION_EPS
+
+    def _zoom_out_progress(self):
+        start_zoom = self._zoom_out_start_zoom
+        target_zoom = 1.0
+        span = start_zoom - target_zoom
+        if abs(span) <= 1e-6:
+            return None
+        progress = (self.camera.zoom - target_zoom) / span
+        return max(0.0, min(1.0, progress))
 
 class LevelSelectScreen(BaseScreen):
     def __init__(self, back_action=None, continue_action=None, thumb_size=(150, 150), margin=24):

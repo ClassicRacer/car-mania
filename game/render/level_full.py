@@ -154,6 +154,17 @@ class LevelFullRenderer:
             entry["scaled_size"] = None
         return entry
 
+    def focus_camera(self, camera, level_row, reset_zoom=True, reset_rotation=True):
+        entry = self._get_world(level_row)
+        world = entry["world"]
+        ww, wh = world.get_size()
+        camera.x = ww * 0.5
+        camera.y = wh * 0.5
+        if reset_zoom:
+            camera.zoom = 1.0
+        if reset_rotation:
+            camera.rot_deg = 0.0
+
     def render_to(self, target_surface, level_row, camera=None):
         tw, th = target_surface.get_size()
 
