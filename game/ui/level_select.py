@@ -1,3 +1,4 @@
+import math
 import pygame
 from game.config.constants import FONT_FILE
 from game.io.assets import load_font
@@ -80,23 +81,21 @@ class LevelSelectScreen(BaseScreen):
 
             pressed = pygame.key.get_pressed()
             if pressed[pygame.K_UP]:
-                self.camera.y -= PAN_SPEED * dt
+                self.camera.x += PAN_SPEED * dt * math.sin(math.radians(self.camera.rot_deg))
+                self.camera.y -= PAN_SPEED * dt * math.cos(math.radians(self.camera.rot_deg))
             if pressed[pygame.K_DOWN]:
-                self.camera.y += PAN_SPEED * dt
+                self.camera.x -= PAN_SPEED * dt * math.sin(math.radians(self.camera.rot_deg))
+                self.camera.y += PAN_SPEED * dt * math.cos(math.radians(self.camera.rot_deg))
             if pressed[pygame.K_LEFT]:
-                self.camera.x -= PAN_SPEED * dt
+                self.camera.rot_deg -= ROT_SPEED * dt
             if pressed[pygame.K_RIGHT]:
-                self.camera.x += PAN_SPEED * dt
+                self.camera.rot_deg += ROT_SPEED * dt
 
             if pressed[pygame.K_MINUS]:
                 self.camera.zoom /= (1.0 + ZOOM_RATE * dt)
             if pressed[pygame.K_EQUALS]:
                 self.camera.zoom *= (1.0 + ZOOM_RATE * dt)
 
-            if pressed[pygame.K_q]:
-                self.camera.rot_deg -= ROT_SPEED * dt
-            if pressed[pygame.K_e]:
-                self.camera.rot_deg += ROT_SPEED * dt
 
             self.camera.zoom = max(MIN_ZOOM, min(MAX_ZOOM, self.camera.zoom))
             self.camera.rot_deg %= 360.0
@@ -138,6 +137,10 @@ class LevelSelectScreen(BaseScreen):
                 surf.blit(overlay, (rect.x - 10, rect.y - 10))
             surf.blit(img, img.get_rect(center=rect.center))
             surf.blit(name, name.get_rect(center=(rect.centerx, rect.bottom + 20)))
+
+        pygame.draw.line(surf, (255, 0, 0), (half_W - 10, half_H), (half_W + 10, half_H), 2)
+        pygame.draw.line(surf, (255, 0, 0), (half_W, half_H - 10), (half_W, half_H + 10), 2)
+        
         mp = ctx["get_mouse_pos"]()
         self.continue_button.draw(surf, mp)
         self.draw_back(ctx, surf)
