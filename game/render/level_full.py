@@ -154,6 +154,10 @@ class LevelFullRenderer:
             entry["scaled_size"] = None
         return entry
 
+    def get_piece_bounds(self, level_row):
+        entry = self._get_world(level_row)
+        return entry["bounds"]
+
     def focus_camera(self, camera, level_row, reset_zoom=True, reset_rotation=True):
         entry = self._get_world(level_row)
         world = entry["world"]

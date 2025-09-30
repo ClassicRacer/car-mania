@@ -1,4 +1,3 @@
-import math
 import random
 import pygame
 from game.config.constants import FONT_FILE
@@ -7,12 +6,12 @@ from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.level_preview import LevelPreviewRenderer, parse_level_code
 from game.render.level_full import Camera2D, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
-from game.ui.widgets.button import BackControl, Button
+from game.ui.widgets.button import Button
 from game.data.queries import fetch_levels
 
 
 class CameraTour:
-    WAIT_DURATION = 5.0
+    WAIT_DURATION = 2.5
     PAN_SPEED = 640.0
     ZOOM_SPEED = 1.6
     MIN_ZOOM = 0.05
@@ -20,6 +19,8 @@ class CameraTour:
     POSITION_EPS = 1.0
     ZOOM_EPS = 0.02
     ZOOM_IN_FACTOR = 1.8
+    ROTATE_SPEED = 20.0
+    ROTATE_EPS = 0.5
 
     def __init__(self, renderer: LevelFullRenderer, camera: Camera2D):
         self.renderer = renderer
@@ -30,8 +31,6 @@ class CameraTour:
         self.level_center = pygame.Vector2(0.0, 0.0)
         self.origin = pygame.Vector2(0.0, 0.0)
         self.index = 0
-        self.ROTATE_SPEED = 20.0
-        self.ROTATE_EPS = 0.5
         self._zoom_out_start_zoom = 1.0
         self._zoom_out_start_rot = 0.0
         self._zoom_out_start_pos = pygame.Vector2(0.0, 0.0)
@@ -247,7 +246,6 @@ class LevelSelectScreen(BaseScreen):
         self.thumb_size = thumb_size
         self.camera = None
         self.margin = margin
-        self.rotation = 0
         self.camera_tour = None
 
     def enter(self, ctx):
@@ -273,8 +271,9 @@ class LevelSelectScreen(BaseScreen):
     def _continue(self, ctx):
         if self.levels:
             ctx["selected_level_id"] = self.selected_level
+            ctx["level_data"] = self.levels[self.selected_level]
             if self.continue_action:
-                self.continue_action(ctx, self.levels[self.selected_level])
+                self.continue_action(ctx)
 
 
     def update(self, ctx, dt):

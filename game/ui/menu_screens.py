@@ -1,5 +1,6 @@
 import pygame
 from game.io.render import get_half_screen, end_frame
+from game.ui.gameplay import Gameplay
 from game.ui.level_select import LevelSelectScreen
 from game.ui.widgets.button import Button, layout_column, poll_actions_cached
 from game.config.constants import FONT_FILE, ICON_FONT_FILE
@@ -89,8 +90,12 @@ def go_create_menu(ctx):
 
 def on_car_selected(ctx, car):
     g = ctx["game"]
-    g.set(LevelSelectScreen(back_action=go_car_select, continue_action=None))
+    g.set(LevelSelectScreen(back_action=go_car_select, continue_action=on_level_selected))
 
 def go_car_select(ctx):
     g = ctx["game"]
     g.set(CarSelectScreen(back_action=go_main_menu, continue_action=on_car_selected))
+
+def on_level_selected(ctx):
+    g = ctx["game"]
+    g.set(Gameplay(back_action=go_main_menu))
