@@ -1,74 +1,18 @@
 import pygame
 
-def parse_level_code(code_text: str):
-    roads = []
-    trees = []
-    gates = []
-    if not code_text:
-        return roads, trees, gates, None
-    lines = [ln.strip() for ln in code_text.splitlines() if ln.strip()]
-    for ln in lines:
-        parts = ln.split(",")
-        k = parts[0]
-        if k == "road" and len(parts) >= 5:
-            t = int(parts[1])
-            x = int(parts[2])
-            y = -int(parts[3])
-            ang = int(parts[4])
-            roads.append((t, x, y, ang))
-        elif k == "tree" and len(parts) >= 4:
-            t = int(parts[1])
-            x = int(parts[2])
-            y = -int(parts[3])
-            trees.append((t, x, y))
-        elif k == "gate" and len(parts) >= 5:
-            order = int(parts[1])
-            x = int(parts[2])
-            y = -int(parts[3])
-            ang = int(parts[4])
-            gates.append((order, x, y, ang))
-    return roads, trees, gates, None
+from game.render.level_utils import compute_piece_bounds, parse_level_code
 
 class LevelPreviewRenderer:
     def __init__(self, pieces: dict, target_size=(480, 270)):
         self.pieces = pieces
         self.size = target_size
 
-    def _bounds(self, roads, trees, gates):
-        pts = []
-        def add_rect(w, h, x, y):
-            pts.append((x, y))
-            pts.append((x + w, y + h))
-        for t,x,y,ang in roads:
-            img = self.pieces.get(f"road_{t}")
-            if img:
-                w,h = img.get_size()
-                add_rect(w,h,x,y)
-        for t,x,y in trees:
-            img = self.pieces.get(f"tree_{t}")
-            if img:
-                w,h = img.get_size()
-                add_rect(w,h,x,y)
-        for order,x,y,ang in gates:
-            img = self.pieces.get("gate")
-            if img:
-                w,h = img.get_size()
-                add_rect(w,h,x,y)
-        if not pts:
-            return pygame.Rect(0,0,1,1)
-        xs = [p[0] for p in pts]
-        ys = [p[1] for p in pts]
-        r = pygame.Rect(min(xs), min(ys), 1, 1)
-        r.width = max(xs) - r.x or 1
-        r.height = max(ys) - r.y or 1
-        return r
-
     def render(self, level_row: dict):
         surf = pygame.Surface(self.size, pygame.SRCALPHA)
         bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
         surf.fill(bg)
         roads, trees, gates, _ = parse_level_code(level_row["code"])
-        bounds = self._bounds(roads, trees, gates)
+        bounds = compute_piece_bounds(self.pieces, roads, trees, gates)
         pad = 20
         vw = self.size[0] - pad*2
         vh = self.size[1] - pad*2
