@@ -1,120 +1,34 @@
 import math
 import pygame
 
-class Camera2D:
-    def __init__(self, x=0.0, y=0.0, zoom=1.0, rot_deg=0.0):
-        self.x = float(x)
-        self.y = float(y)
-        self.zoom = float(zoom)
-        self.rot_deg = float(rot_deg)
-
-    def fit_to_bounds(self, surf_size, bounds, margin_px=40, hud_h=240):
-        tw, th = surf_size
-        avail_w = max(1, tw - margin_px*2)
-        avail_h = max(1, th - margin_px*2 - hud_h)
-        sx = avail_w / max(1, bounds.width)
-        sy = avail_h / max(1, bounds.height)
-        self.zoom = min(sx, sy)
-        self.x = bounds.centerx
-        self.y = bounds.centery
-        self.rot_deg = 0.0
-
-def _parse(code_text):
-    roads, trees, gates = [], [], []
-    for raw in code_text.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        p = [x.strip() for x in line.split(",")]
-        t = p[0]
-        if t == "road":
-            roads.append((int(p[1]), int(p[2]), -int(p[3]), int(p[4])))
-        elif t == "tree":
-            trees.append((int(p[1]), int(p[2]), -int(p[3])))
-        elif t == "gate":
-            gates.append((int(p[1]), int(p[2]), -int(p[3]), int(p[4])))
-    return roads, trees, gates
-
-def _bounds(pieces, roads, trees, gates):
-    pts = []
-    def add_rect(w, h, x, y):
-        pts.append((x, y))
-        pts.append((x + w, y + h))
-    for typ, x, y, ang in roads:
-        img = pieces.get(f"road_{typ}")
-        if img:
-            w, h = img.get_size()
-            add_rect(w, h, x, y)
-    for typ, x, y in trees:
-        img = pieces.get(f"tree_{typ}")
-        if img:
-            w, h = img.get_size()
-            add_rect(w, h, x, y)
-    for order, x, y, ang in gates:
-        img = pieces.get("gate")
-        if img:
-            w, h = img.get_size()
-            add_rect(w, h, x, y)
-    if not pts:
-        return pygame.Rect(0, 0, 1, 1)
-    xs = [p[0] for p in pts]
-    ys = [p[1] for p in pts]
-    r = pygame.Rect(min(xs), min(ys), 1, 1)
-    r.width = max(xs) - r.x or 1
-    r.height = max(ys) - r.y or 1
-    return r
-
-def _world_to_screen(x, y, cam, surf_center, base_zoom=1.0):
-    s = base_zoom * cam.zoom
-    r = math.radians(cam.rot_deg)
-    dx = x - cam.x
-    dy = y - cam.y
-    rx = dx*math.cos(r) - dy*math.sin(r)
-    ry = dx*math.sin(r) + dy*math.cos(r)
-    sx = surf_center[0] + rx*s
-    sy = surf_center[1] + ry*s
-    return s, sx, sy
-
-def _blit_transformed(surf, img, base_scale, cam, ang, x, y, surf_center):
-    s, sx, sy = _world_to_screen(x, y, cam, surf_center, base_scale)
-    if s != 1.0:
-        w, h = img.get_size()
-        img = pygame.transform.smoothscale(img, (max(1, int(w*s)), max(1, int(h*s))))
-    if ang or cam.rot_deg:
-        img = pygame.transform.rotate(img, ang + cam.rot_deg)
-    rect = img.get_rect()
-    rect.topleft = (int(sx), int(sy))
-    surf.blit(img, rect)
+from game.render.camera import Camera2D
+from game.render.level_utils import compute_piece_bounds, parse_level_code
 
 class LevelFullRenderer:
-    def __init__(self, pieces, margin_px=40, hud_h=240):
+    def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None):
         self.pieces = pieces
         self.margin = margin_px
         self.hud_h = hud_h
+
+        if origin_offset is None:
+            road = self.pieces.get("road_1")
+            if road:
+                default_offset = (-road.get_width() * 0.5, 0.0)
+            else:
+                default_offset = (0.0, 0.0)
+        else:
+            default_offset = origin_offset
+
+        self.origin_offset = pygame.Vector2(default_offset)
         self._cache = {}
 
-    def _build_world(self, level_row):
-        roads, trees, gates = _parse(level_row["code"])
-        pts = []
-        def add_rect(w,h,x,y):
-            pts.append((x,y)); pts.append((x+w, y+h))
-        for t,x,y,ang in roads:
-            img = self.pieces.get(f"road_{t}"); 
-            if img: add_rect(*img.get_size(), x, y)
-        for t,x,y in trees:
-            img = self.pieces.get(f"tree_{t}");
-            if img: add_rect(*img.get_size(), x, y)
-        for _,x,y,ang in gates:
-            img = self.pieces.get("gate");
-            if img: add_rect(*img.get_size(), x, y)
+    def set_origin_offset(self, offset):
+        self.origin_offset = pygame.Vector2(offset)
+        return self.origin_offset
 
-        if not pts:
-            bounds = pygame.Rect(0,0,1,1)
-        else:
-            xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
-            bounds = pygame.Rect(min(xs), min(ys), 1, 1)
-            bounds.width  = max(xs) - bounds.x or 1
-            bounds.height = max(ys) - bounds.y or 1
+    def _build_world(self, level_row):
+        roads, trees, gates, _ = parse_level_code(level_row["code"])
+        bounds = compute_piece_bounds(self.pieces, roads, trees, gates)
 
         world = pygame.Surface((bounds.w, bounds.h), pygame.SRCALPHA).convert_alpha()
         bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
@@ -162,8 +76,8 @@ class LevelFullRenderer:
         entry = self._get_world(level_row)
         world = entry["world"]
         ww, wh = world.get_size()
-        camera.x = ww * 0.5
-        camera.y = wh * 0.5
+        camera.x = ww * 0.5 + self.origin_offset.x
+        camera.y = wh * 0.5 + self.origin_offset.y
         if reset_zoom:
             camera.zoom = 1.0
         if reset_rotation:
@@ -179,35 +93,71 @@ class LevelFullRenderer:
 
         avail_w = max(1, tw - self.margin*2)
         avail_h = max(1, th - self.margin*2 - self.hud_h)
-        base_scale = min(avail_w / ww, avail_h / wh)
+        fit_zoom = min(avail_w / ww, avail_h / wh)
 
         if camera is None:
-            camera = Camera2D(x=ww*0.5, y=wh*0.5, zoom=1.0, rot_deg=0.0)
+            camera = Camera2D(x=ww*0.5, y=wh*0.5, zoom=fit_zoom, rot_deg=0.0)
+
+        offset_x, offset_y = self.origin_offset
 
         pivot = (tw // 2, th // 2)
-        zoom = base_scale * camera.zoom
+        zoom = max(1e-6, camera.zoom)
+        angle = camera.rot_deg % 360.0
+        angle_eps = 1e-3
 
-        # Cache the expensive smoothscale so we only redo it when the zoom size changes.
-        target_scaled_size = (max(1, int(round(ww * zoom))), max(1, int(round(wh * zoom))))
-        if entry["scaled_size"] != target_scaled_size:
-            if target_scaled_size == (ww, wh):
-                scaled = world
+        full_scale_needed = zoom <= 1.0 or not (angle <= angle_eps or angle >= 360.0 - angle_eps)
+
+        scaled = world
+        if full_scale_needed:
+            target_scaled_size = (max(1, int(round(ww * zoom))), max(1, int(round(wh * zoom))))
+            if entry["scaled_size"] != target_scaled_size:
+                if target_scaled_size == (ww, wh):
+                    scaled = world
+                else:
+                    if zoom < 1.0:
+                        scaled = pygame.transform.smoothscale(world, target_scaled_size)
+                    else:
+                        scaled = pygame.transform.scale(world, target_scaled_size)
+                entry["scaled_surface"] = scaled
+                entry["scaled_size"] = target_scaled_size
             else:
-                scaled = pygame.transform.smoothscale(world, target_scaled_size)
-            entry["scaled_surface"] = scaled
-            entry["scaled_size"] = target_scaled_size
-        else:
-            scaled = entry["scaled_surface"] or world
+                scaled = entry["scaled_surface"] or world
 
         target_surface.fill(bg)
 
-        angle = camera.rot_deg % 360.0
-        if angle <= 1e-3 or angle >= 360.0 - 1e-3:
-            top_left = (
-                int(round(pivot[0] - camera.x * zoom)),
-                int(round(pivot[1] - camera.y * zoom)),
-            )
-            target_surface.blit(scaled, top_left)
+        cam_x = camera.x - offset_x
+        cam_y = camera.y - offset_y
+
+        if angle <= angle_eps or angle >= 360.0 - angle_eps:
+            if full_scale_needed:
+                top_left = (
+                    int(round(pivot[0] - cam_x * zoom)),
+                    int(round(pivot[1] - cam_y * zoom)),
+                )
+                target_surface.blit(scaled, top_left)
+            else:
+                pad = 4
+                view_w = max(1, int(math.ceil(tw / zoom)))
+                view_h = max(1, int(math.ceil(th / zoom)))
+                view_left = int(math.floor(camera.x - view_w * 0.5)) - pad
+                view_top = int(math.floor(camera.y - view_h * 0.5)) - pad
+                view_rect = pygame.Rect(view_left, view_top, view_w + pad * 2, view_h + pad * 2)
+                world_rect = world.get_rect()
+                view_rect = view_rect.clip(world_rect)
+                if view_rect.width <= 0 or view_rect.height <= 0:
+                    view_rect = world_rect
+                view = world.subsurface(view_rect)
+                scaled_size = (
+                    max(1, int(round(view_rect.width * zoom))),
+                    max(1, int(round(view_rect.height * zoom))),
+                )
+                if zoom != 1.0:
+                    view = pygame.transform.scale(view, scaled_size)
+                screen_pos = (
+                    int(round(pivot[0] - (cam_x - view_rect.x) * zoom)),
+                    int(round(pivot[1] - (cam_y - view_rect.y) * zoom)),
+                )
+                target_surface.blit(view, screen_pos)
             return
 
         diag = int(math.ceil(math.hypot(tw, th)))
@@ -216,8 +166,8 @@ class LevelFullRenderer:
 
         cxc = cyc = diag // 2
         top_left = (
-            int(round(cxc - camera.x * zoom)),
-            int(round(cyc - camera.y * zoom)),
+            int(round(cxc - cam_x * zoom)),
+            int(round(cyc - cam_y * zoom)),
         )
         canvas.blit(scaled, top_left)
 

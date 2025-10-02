@@ -40,8 +40,10 @@ class CarSelectScreen(BaseScreen):
 
     def _continue(self, ctx):
         ctx["selected_car_id"] = self.selected_car
-        if self.continue_action and self.cars:
-            self.continue_action(ctx, self.cars[self.selected_car])
+        selected = self.cars[self.selected_car] if self.cars else None
+        ctx["selected_car"] = selected
+        if self.continue_action and selected:
+            self.continue_action(ctx, selected)
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
