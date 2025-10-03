@@ -59,6 +59,12 @@ class LevelSelectScreen(BaseScreen):
             target_pos = self.car.pos if self.car else None
 
             def _finish_transition():
+                ctx["gameplay"] = {
+                    "camera": self.camera,
+                    "level_data": self.levels[self.selected_level],
+                    "car": self.car,
+                    "car_data": ctx.get("selected_car"),
+                }
                 if self.continue_action:
                     self.continue_action(ctx)
 
