@@ -64,6 +64,15 @@ class CameraTour:
         self.base_zoom = 1.0
         self._zoom_in_target = 1.0
         self._zoom_out_target_zoom = 1.0
+        self._gameplay_start_pos = pygame.Vector2(0.0, 0.0)
+        self._gameplay_target_pos = pygame.Vector2(0.0, 0.0)
+        self._gameplay_start_zoom = 1.0
+        self._gameplay_target_zoom = 1.0
+        self._gameplay_duration = 0.0
+        self._gameplay_progress = 0.0
+        self._gameplay_start_rot = 0.0
+        self._gameplay_end_rot = 0.0
+        self._level_bounds = None
 
     def load_level(self, level_row: dict):
         if not level_row:
@@ -77,6 +86,7 @@ class CameraTour:
 
         self.origin = pygame.Vector2(-bounds.x, -bounds.y)
         self.level_center = pygame.Vector2(world.get_width() * 0.5, world.get_height() * 0.5)
+        self._level_bounds = bounds.copy()
 
         _, _, gates, _ = parse_level_code(level_row.get("code", ""))
         gate_image = self.renderer.pieces.get("gate") if hasattr(self.renderer, "pieces") else None
@@ -115,7 +125,7 @@ class CameraTour:
         self._rotation_dir = random.choice((-1, 1))
 
     def update(self, dt: float):
-        if self.state not in ["idle", "wait", "zoom_out"]:
+        if self.state not in ["idle", "wait", "zoom_out", "gameplay"]:
             self.camera.rot_deg = (self.camera.rot_deg + self._rotation_dir * self.ROTATE_SPEED * dt) % 360.0
 
         if self.state == "idle":
@@ -162,6 +172,12 @@ class CameraTour:
                 self._zoom_out_start_zoom = self.camera.zoom
                 self._zoom_out_start_rot = 0.0
                 self._zoom_out_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+            return
+
+        if self.state == "gameplay":
+            done = self._update_gameplay_motion(dt)
+            if done:
+                self.state = "idle"
             return
 
     def _approach_position(self, target: pygame.Vector2, dt: float) -> bool:
@@ -272,3 +288,98 @@ class CameraTour:
         if ww <= 0 or wh <= 0:
             return 1.0
         return min(avail_w / ww, avail_h / wh)
+
+    def begin_gameplay(self, car_pos, target_zoom=None, *, relative=False):
+        """Begin transition to gameplay state focusing on the car.
+
+        Parameters
+        ----------
+        car_pos: sequence or object with ``pos``
+            Target position for the car. By default values are interpreted in the
+            level's coordinate space (the same system used in the level code) and
+            translated to the local tour space.
+        target_zoom: float, optional
+            Optional zoom level to land on when the transition finishes.
+        relative: bool
+            When ``True`` the provided coordinates are assumed to already be
+            level-relative (e.g. the same data returned from ``parse_level_code``)
+            and used as-is. When ``False`` (default) the values are translated
+            using the cached level bounds, matching how gate points are prepared.
+        """
+        if car_pos is None:
+            car_vec = pygame.Vector2(self.camera.x, self.camera.y)
+        else:
+            if hasattr(car_pos, "pos"):
+                src_pos = car_pos.pos
+            else:
+                src_pos = car_pos
+            car_vec = pygame.Vector2(src_pos)
+            if self._level_bounds is not None:
+                if not relative:
+                    bounds = self._level_bounds
+                    car_vec.x -= bounds.x
+                    car_vec.y -= bounds.y
+                else:
+                    margin = max(64.0, float(getattr(self.renderer, "margin", 0)))
+                    bounds = self._level_bounds
+                    if (
+                        car_vec.x < -margin
+                        or car_vec.y < -margin
+                        or car_vec.x > bounds.width + margin
+                        or car_vec.y > bounds.height + margin
+                    ):
+                        car_vec.x -= bounds.x
+                        car_vec.y -= bounds.y
+
+        self._gameplay_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
+        self._gameplay_target_pos = car_vec
+        self._gameplay_start_zoom = float(self.camera.zoom)
+        if target_zoom is None:
+            self._gameplay_target_zoom = self._gameplay_start_zoom
+        else:
+            self._gameplay_target_zoom = self._clamp_zoom(float(target_zoom))
+
+        dist = self._gameplay_start_pos.distance_to(self._gameplay_target_pos)
+        move_duration = dist / self.PAN_SPEED if self.PAN_SPEED > 1e-6 else 0.0
+        zoom_delta = abs(self._gameplay_target_zoom - self._gameplay_start_zoom)
+        zoom_duration = zoom_delta / self.ZOOM_SPEED if self.ZOOM_SPEED > 1e-6 else 0.0
+        self._gameplay_duration = max(move_duration, zoom_duration, 1e-6)
+        self._gameplay_progress = 0.0
+
+        start_angle = self.camera.rot_deg % 360.0
+        self._gameplay_start_rot = start_angle
+        self._gameplay_end_rot = 0.0 if start_angle <= 180.0 else 360.0
+
+        self.state = "gameplay"
+
+    def _update_gameplay_motion(self, dt: float) -> bool:
+        if self._gameplay_duration <= 1e-6:
+            self.camera.x = self._gameplay_target_pos.x
+            self.camera.y = self._gameplay_target_pos.y
+            self.camera.zoom = self._gameplay_target_zoom
+            self.camera.rot_deg = 0.0
+            return True
+
+        self._gameplay_progress = min(1.0, self._gameplay_progress + dt / self._gameplay_duration)
+        t = self._gameplay_progress
+
+        pos = self._gameplay_start_pos.lerp(self._gameplay_target_pos, t)
+        self.camera.x, self.camera.y = pos.x, pos.y
+
+        zoom = self._gameplay_start_zoom + (self._gameplay_target_zoom - self._gameplay_start_zoom) * t
+        self.camera.zoom = self._clamp_zoom(zoom)
+
+        angle = self._gameplay_start_rot + (self._gameplay_end_rot - self._gameplay_start_rot) * t
+        angle %= 360.0
+        if min(angle, 360.0 - angle) <= self.ROTATE_EPS:
+            angle = 0.0
+        self.camera.rot_deg = angle
+
+        if t >= 0.999:
+            self.camera.x = self._gameplay_target_pos.x
+            self.camera.y = self._gameplay_target_pos.y
+            self.camera.zoom = self._clamp_zoom(self._gameplay_target_zoom)
+            self.camera.rot_deg = 0.0
+            return True
+
+        return False

@@ -13,7 +13,7 @@ class LevelFullRenderer:
         if origin_offset is None:
             road = self.pieces.get("road_1")
             if road:
-                default_offset = (-road.get_width() * 0.5, 0.0)
+                default_offset = (-road.get_width() * 0.33, 0.0)
             else:
                 default_offset = (0.0, 0.0)
         else:
@@ -83,11 +83,12 @@ class LevelFullRenderer:
         if reset_rotation:
             camera.rot_deg = 0.0
 
-    def render_to(self, target_surface, level_row, camera=None):
+    def render_to(self, target_surface, level_row, camera=None, actors=None):
         tw, th = target_surface.get_size()
 
         entry = self._get_world(level_row)
         world = entry["world"]
+        bounds = entry["bounds"]
         bg = entry["bg"]
         ww, wh = world.get_size()
 
@@ -135,6 +136,15 @@ class LevelFullRenderer:
                     int(round(pivot[1] - cam_y * zoom)),
                 )
                 target_surface.blit(scaled, top_left)
+                if actors:
+                    actors_top_left = (
+                        top_left[0] - int(round(bounds.x * zoom)) - int(round(offset_x * zoom)),
+                        top_left[1] - int(round(bounds.y * zoom)) - int(round(offset_y * zoom)),
+                    )
+                    for actor in actors:
+                        if hasattr(actor, "render_in_canvas_space"):
+                            actor.render_in_canvas_space(target_surface, actors_top_left, zoom)
+                return
             else:
                 pad = 4
                 view_w = max(1, int(math.ceil(tw / zoom)))
@@ -158,7 +168,15 @@ class LevelFullRenderer:
                     int(round(pivot[1] - (cam_y - view_rect.y) * zoom)),
                 )
                 target_surface.blit(view, screen_pos)
-            return
+                if actors:
+                    actors_top_left = (
+                        screen_pos[0] - int(round((view_rect.x + bounds.x) * zoom)) - int(round(offset_x * zoom)),
+                        screen_pos[1] - int(round((view_rect.y + bounds.y) * zoom)) - int(round(offset_y * zoom)),
+                    )
+                    for actor in actors:
+                        if hasattr(actor, "render_in_canvas_space"):
+                            actor.render_in_canvas_space(target_surface, actors_top_left, zoom)
+                return
 
         diag = int(math.ceil(math.hypot(tw, th)))
         canvas = pygame.Surface((diag, diag), pygame.SRCALPHA).convert_alpha()
@@ -170,6 +188,14 @@ class LevelFullRenderer:
             int(round(cyc - cam_y * zoom)),
         )
         canvas.blit(scaled, top_left)
+        if actors:
+            actors_top_left = (
+                top_left[0] - int(round(bounds.x * zoom)) - int(round(offset_x * zoom)),
+                top_left[1] - int(round(bounds.y * zoom)) - int(round(offset_y * zoom)),
+            )
+            for actor in actors:
+                if hasattr(actor, "render_in_canvas_space"):
+                    actor.render_in_canvas_space(canvas, actors_top_left, zoom)
 
         rotated = pygame.transform.rotate(canvas, angle)
         target_surface.blit(rotated, rotated.get_rect(center=pivot))

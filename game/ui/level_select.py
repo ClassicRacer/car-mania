@@ -1,11 +1,10 @@
-import random
 import pygame
 from game.config.constants import FONT_FILE
 from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour
+from game.render.car import Car
 from game.render.level_preview import LevelPreviewRenderer
-from game.render.level_utils import parse_level_code
 from game.render.level_full import Camera2D, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
 from game.ui.widgets.button import Button
@@ -25,6 +24,8 @@ class LevelSelectScreen(BaseScreen):
         self.camera = None
         self.margin = margin
         self.camera_tour = None
+        self.car = None
+        self.hide_ui = False
 
     def enter(self, ctx):
         super().enter(ctx)
@@ -42,17 +43,22 @@ class LevelSelectScreen(BaseScreen):
             self.selected_level = ctx["selected_level_id"]
         self.camera = Camera2D()
         self.camera_tour = CameraTour(self.full_renderer, self.camera)
+        car_img = ctx["selected_car"]["image_data"] if ctx.get("selected_car") else None
+        if car_img:
+            scale = self.compute_car_scale(ctx["pieces"], car_img, ref_key="road_1", fraction=0.35)
+            self.car = Car(car_img, pos=(0.0, 0.0), angle_deg=0.0, scale=scale)
         if self.levels:
             self._focus_camera_on_selected_level()
-            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera)
+            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=[self.car] if self.car else None)
 
     def _continue(self, ctx):
         if self.levels:
             ctx["selected_level_id"] = self.selected_level
             ctx["level_data"] = self.levels[self.selected_level]
-            if self.continue_action:
+            self.hide_ui = True
+            animation_finished = self.camera_tour.begin_gameplay(self.car.pos, 1.5)
+            if animation_finished and self.continue_action:
                 self.continue_action(ctx)
-
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
@@ -70,7 +76,7 @@ class LevelSelectScreen(BaseScreen):
                 self._continue(ctx)
             elif name == "window_resized" and phase == "change":
                 if self.levels:
-                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], camera=self.camera)
+                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], camera=self.camera, actors=[self.car] if self.car else None)
 
         if self.camera_tour and self.levels:
             self.camera_tour.update(dt)
@@ -89,36 +95,38 @@ class LevelSelectScreen(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.levels:
-            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera)
-            line = self.font.render(self.levels[self.selected_level]["name"], True, (255, 255, 255))
-            surf.blit(line, line.get_rect(center=(half_W, 190)))
+            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera, actors=[self.car] if self.car else None)
+            if not self.hide_ui:
+                line = self.font.render(self.levels[self.selected_level]["name"], True, (255, 255, 255))
+                surf.blit(line, line.get_rect(center=(half_W, 190)))
 
-        title = self.title_font.render("Select Level", True, (255, 255, 255))
-        surf.blit(title, title.get_rect(center=(half_W, 100)))
+        if not self.hide_ui:
+            title = self.title_font.render("Select Level", True, (255, 255, 255))
+            surf.blit(title, title.get_rect(center=(half_W, 100)))
 
-        N = max(1, len(self.levels))
-        pad = self.margin
-        slot_w = (W - pad*2) // N
-        slot_h = self.thumb_size[1]
-        y = H - 150
-        for idx, (row, thumb) in enumerate(zip(self.levels, self.thumbs)):
-            img = self._scale_image(thumb, self.thumb_size)
-            name = self.card_font.render(row["name"], True, (255, 255, 255))
-            rect = pygame.Rect(0, 0, slot_w, slot_h)
-            rect.center = (pad + slot_w*idx + slot_w//2, y)
-            if idx == self.selected_level:
-                overlay = pygame.Surface((rect.w + 20, rect.h + 50), pygame.SRCALPHA)
-                pygame.draw.rect(overlay, (50, 50, 50, 180), overlay.get_rect(), border_radius=8)
-                surf.blit(overlay, (rect.x - 10, rect.y - 10))
-            surf.blit(img, img.get_rect(center=rect.center))
-            surf.blit(name, name.get_rect(center=(rect.centerx, rect.bottom + 20)))
+            N = max(1, len(self.levels))
+            pad = self.margin
+            slot_w = (W - pad*2) // N
+            slot_h = self.thumb_size[1]
+            y = H - 150
+            for idx, (row, thumb) in enumerate(zip(self.levels, self.thumbs)):
+                img = self._scale_image(thumb, self.thumb_size)
+                name = self.card_font.render(row["name"], True, (255, 255, 255))
+                rect = pygame.Rect(0, 0, slot_w, slot_h)
+                rect.center = (pad + slot_w*idx + slot_w//2, y)
+                if idx == self.selected_level:
+                    overlay = pygame.Surface((rect.w + 20, rect.h + 50), pygame.SRCALPHA)
+                    pygame.draw.rect(overlay, (50, 50, 50, 180), overlay.get_rect(), border_radius=8)
+                    surf.blit(overlay, (rect.x - 10, rect.y - 10))
+                surf.blit(img, img.get_rect(center=rect.center))
+                surf.blit(name, name.get_rect(center=(rect.centerx, rect.bottom + 20)))
 
-        pygame.draw.line(surf, (255, 0, 0), (half_W - 10, half_H), (half_W + 10, half_H), 2)
-        pygame.draw.line(surf, (255, 0, 0), (half_W, half_H - 10), (half_W, half_H + 10), 2)
-        
-        mp = ctx["get_mouse_pos"]()
-        self.continue_button.draw(surf, mp)
-        self.draw_back(ctx, surf)
+            pygame.draw.line(surf, (255, 0, 0), (half_W - 10, half_H), (half_W + 10, half_H), 2)
+            pygame.draw.line(surf, (255, 0, 0), (half_W, half_H - 10), (half_W, half_H + 10), 2)
+            
+            mp = ctx["get_mouse_pos"]()
+            self.continue_button.draw(surf, mp)
+            self.draw_back(ctx, surf)
         end_frame()
 
     def _scale_image(self, img : pygame.Surface, tile_size):
@@ -134,4 +142,14 @@ class LevelSelectScreen(BaseScreen):
         row = self.levels[self.selected_level]
         self.full_renderer.focus_camera(self.camera, row)
         if self.camera_tour:
-            self.camera_tour.load_level(row)
+            self.camera_tour.load_level(row)\
+            
+    def compute_car_scale(self, pieces, car_img, *, ref_key="road_1", fraction=0.70):
+        ref = pieces.get(ref_key)
+        if not ref or not car_img:
+            return 1.0
+        road_w, _ = ref.get_size()
+        car_w, _ = car_img.get_size()
+        if car_w <= 0:
+            return 1.0
+        return max(0.01, (road_w * fraction) / car_w)
