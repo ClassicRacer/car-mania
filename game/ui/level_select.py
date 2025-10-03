@@ -5,7 +5,7 @@ from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour
 from game.render.car import Car
 from game.render.level_preview import LevelPreviewRenderer
-from game.render.level_full import Camera2D, LevelFullRenderer
+from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
 from game.ui.widgets.button import Button
 from game.data.queries import fetch_levels
@@ -41,7 +41,7 @@ class LevelSelectScreen(BaseScreen):
             self.selected_level = random.randint(0, len(self.levels)-1) if self.levels else 0
         else:
             self.selected_level = ctx["selected_level_id"]
-        self.camera = Camera2D()
+        self.camera = Camera()
         self.camera_tour = CameraTour(self.full_renderer, self.camera)
         car_img = ctx["selected_car"]["image_data"] if ctx.get("selected_car") else None
         if car_img:
@@ -56,9 +56,13 @@ class LevelSelectScreen(BaseScreen):
             ctx["selected_level_id"] = self.selected_level
             ctx["level_data"] = self.levels[self.selected_level]
             self.hide_ui = True
-            animation_finished = self.camera_tour.begin_gameplay(self.car.pos, 1.5)
-            if animation_finished and self.continue_action:
-                self.continue_action(ctx)
+            target_pos = self.car.pos if self.car else None
+
+            def _finish_transition():
+                if self.continue_action:
+                    self.continue_action(ctx)
+
+            self.camera_tour.begin_gameplay(target_pos, 1.5, on_complete=_finish_transition)
 
     def update(self, ctx, dt):
         actions = self.step(ctx)

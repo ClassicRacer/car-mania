@@ -3,7 +3,7 @@ import math
 import pygame
 
 from game.io.render import end_frame, get_half_screen, get_logical_size
-from game.render.level_full import Camera2D, LevelFullRenderer
+from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
 
 class Gameplay(BaseScreen):
@@ -20,7 +20,7 @@ class Gameplay(BaseScreen):
     def enter(self, ctx):
         super().enter(ctx)
         self.full_renderer = LevelFullRenderer(ctx["pieces"])
-        self.camera = Camera2D(zoom=1.1)
+        self.camera = Camera(zoom=1.1)
         self.car_data = ctx["selected_car"]
         self.car_image = None
         self.car_sprite = None

@@ -1,7 +1,7 @@
 import math
 import pygame
 
-from game.render.camera import Camera2D
+from game.render.camera import Camera
 from game.render.level_utils import compute_piece_bounds, parse_level_code
 
 class LevelFullRenderer:
@@ -97,7 +97,7 @@ class LevelFullRenderer:
         fit_zoom = min(avail_w / ww, avail_h / wh)
 
         if camera is None:
-            camera = Camera2D(x=ww*0.5, y=wh*0.5, zoom=fit_zoom, rot_deg=0.0)
+            camera = Camera(x=ww*0.5, y=wh*0.5, zoom=fit_zoom, rot_deg=0.0)
 
         offset_x, offset_y = self.origin_offset
 

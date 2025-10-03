@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from game.render.level_full import LevelFullRenderer
 
 
-class Camera2D:
+class Camera:
     def __init__(self, x=0.0, y=0.0, zoom=1.0, rot_deg=0.0):
         self.x = float(x)
         self.y = float(y)
@@ -41,7 +41,7 @@ class CameraTour:
     ROTATE_SPEED = 20.0
     ROTATE_EPS = 0.5
 
-    def __init__(self, renderer: 'LevelFullRenderer', camera: Camera2D):
+    def __init__(self, renderer: 'LevelFullRenderer', camera: Camera):
         self.renderer = renderer
         self.camera = camera
         self.state = "idle"
@@ -73,6 +73,7 @@ class CameraTour:
         self._gameplay_start_rot = 0.0
         self._gameplay_end_rot = 0.0
         self._level_bounds = None
+        self._gameplay_on_complete = None
 
     def load_level(self, level_row: dict):
         if not level_row:
@@ -178,6 +179,7 @@ class CameraTour:
             done = self._update_gameplay_motion(dt)
             if done:
                 self.state = "idle"
+                self._dispatch_gameplay_complete()
             return
 
     def _approach_position(self, target: pygame.Vector2, dt: float) -> bool:
@@ -289,7 +291,7 @@ class CameraTour:
             return 1.0
         return min(avail_w / ww, avail_h / wh)
 
-    def begin_gameplay(self, car_pos, target_zoom=None, *, relative=False):
+    def begin_gameplay(self, car_pos, target_zoom=None, *, relative=False, on_complete=None):
         """Begin transition to gameplay state focusing on the car.
 
         Parameters
@@ -305,6 +307,8 @@ class CameraTour:
             level-relative (e.g. the same data returned from ``parse_level_code``)
             and used as-is. When ``False`` (default) the values are translated
             using the cached level bounds, matching how gate points are prepared.
+        on_complete: callable, optional
+            Callback invoked once the transition finishes.
         """
         if car_pos is None:
             car_vec = pygame.Vector2(self.camera.x, self.camera.y)
@@ -350,7 +354,15 @@ class CameraTour:
         self._gameplay_start_rot = start_angle
         self._gameplay_end_rot = 0.0 if start_angle <= 180.0 else 360.0
 
+        self._gameplay_on_complete = on_complete
         self.state = "gameplay"
+
+        if self._gameplay_duration <= 1e-6:
+            if self._update_gameplay_motion(self._gameplay_duration):
+                self.state = "idle"
+                self._dispatch_gameplay_complete()
+                return True
+        return False
 
     def _update_gameplay_motion(self, dt: float) -> bool:
         if self._gameplay_duration <= 1e-6:
@@ -383,3 +395,9 @@ class CameraTour:
             return True
 
         return False
+
+    def _dispatch_gameplay_complete(self) -> None:
+        if self._gameplay_on_complete:
+            callback = self._gameplay_on_complete
+            self._gameplay_on_complete = None
+            callback()
