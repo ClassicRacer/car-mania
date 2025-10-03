@@ -1,21 +1,21 @@
 import pygame
 
 from game.io.render import end_frame, get_half_screen
-from game.render.car import Car
+from game.render.car import CarRenderer, CarActor
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
 
 
 class Gameplay(BaseScreen):
-
     def __init__(self, back_action=None):
         super().__init__(back_action)
         self.full_renderer = None
+        self.car_renderer = CarRenderer()
         self.camera = None
         self.car = None
-        self.car_data = None
+        self.car_actor = None
         self.level_data = None
-        self._input_state = {"up": False, "down": False}
+        self._input_state = {"up": False, "down": False, "left": False, "right": False}
 
     def enter(self, ctx):
         super().enter(ctx)
@@ -27,14 +27,13 @@ class Gameplay(BaseScreen):
         self.level_data = payload.get("level_data") or ctx.get("level_data") or self.level_data
         self.camera = payload.get("camera") or self.camera or Camera()
         self.car = payload.get("car") or self.car
-        self.car_data = payload.get("car_data") or ctx.get("selected_car") or self.car_data
+        self.car_actor = CarActor(self.car_renderer, self.car)
 
         if self.car is None and self.car_data:
             image = self.car_data.get("image_data")
             if image is not None:
-                self.car = Car(image, pos=(0.0, 0.0))
+                self.car = CarRenderer(image, pos=(0.0, 0.0))
 
-        self._input_state = {"up": False, "down": False}
         self._focus_camera_on_car()
 
     def on_resize(self, ctx, size):
@@ -42,13 +41,9 @@ class Gameplay(BaseScreen):
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
-        if actions is None:
-            return False
-
         if self.handle_back(ctx, actions):
             return True
 
-        self._process_actions(actions)
         self._update_car_motion(dt)
         self._focus_camera_on_car()
         return True
@@ -58,8 +53,7 @@ class Gameplay(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.full_renderer and self.level_data and self.camera:
-            actors = [self.car] if self.car else None
-            self.full_renderer.render_to(surf, self.level_data, camera=self.camera, actors=actors)
+            self.full_renderer.render_to(surf, self.level_data, camera=self.camera, actors=[self.car_actor])
         else:
             surf.fill((20, 20, 20))
 
@@ -70,7 +64,7 @@ class Gameplay(BaseScreen):
     def _focus_camera_on_car(self):
         if not self.camera or not self.car:
             return
-        pos = pygame.Vector2(self.car.pos)
+        pos = pygame.Vector2(self.car.transform.pos)
 
         if self.full_renderer and self.level_data:
             bounds = self.full_renderer.get_piece_bounds(self.level_data)
@@ -89,6 +83,10 @@ class Gameplay(BaseScreen):
             if name == "up":
                 self._input_state["up"] = phase == "press"
             elif name == "down":
+                self._input_state["down"] = phase == "press"
+            if name == "left":
+                self._input_state["left"] = phase == "press"
+            elif name == "right":
                 self._input_state["down"] = phase == "press"
 
     def _update_car_motion(self, dt: float):

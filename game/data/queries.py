@@ -17,7 +17,7 @@ def fetch_cars(conn, profile_id):
            ORDER BY display_order, id""",
         (profile_id,)
     )
-    return [dict(row) for row in cur.fetchall()]
+    return [{k: v for k, v in dict(row).items() if k != "display_order"} for row in cur.fetchall()]
 
 def get_max_stats(conn, profile_id):
     conn.row_factory = sqlite3.Row

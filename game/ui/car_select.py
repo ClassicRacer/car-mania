@@ -32,7 +32,7 @@ class CarSelectScreen(BaseScreen):
         else:
             self.selected_car = ctx["selected_car_id"]
         for car in self.cars:
-            img = load_image(car["image"])
+            img = load_image(car.pop("image"))
             if img is None:
                 img = pygame.Surface((200, 100))
                 img.fill((255, 0, 255))

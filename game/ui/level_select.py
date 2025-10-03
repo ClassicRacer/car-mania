@@ -3,7 +3,7 @@ from game.config.constants import FONT_FILE
 from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour
-from game.render.car import Car
+from game.render.car import CarRenderer, car_from_dict, CarActor
 from game.render.level_preview import LevelPreviewRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.base_screen import BaseScreen
@@ -25,6 +25,8 @@ class LevelSelectScreen(BaseScreen):
         self.margin = margin
         self.camera_tour = None
         self.car = None
+        self.car_renderer = CarRenderer()
+        self.car_actor = None
         self.hide_ui = False
 
     def enter(self, ctx):
@@ -43,27 +45,25 @@ class LevelSelectScreen(BaseScreen):
             self.selected_level = ctx["selected_level_id"]
         self.camera = Camera()
         self.camera_tour = CameraTour(self.full_renderer, self.camera)
-        car_img = ctx["selected_car"]["image_data"] if ctx.get("selected_car") else None
-        if car_img:
-            scale = self.compute_car_scale(ctx["pieces"], car_img, ref_key="road_1", fraction=0.35)
-            self.car = Car(car_img, pos=(0.0, 0.0), angle_deg=0.0, scale=scale)
+        self.car = car_from_dict(ctx["selected_car"], ctx)
+        self.car_actor = CarActor(self.car_renderer, self.car)
         if self.levels:
             self._focus_camera_on_selected_level()
-            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=[self.car] if self.car else None)
+            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=[self.car_actor])
 
     def _continue(self, ctx):
         if self.levels:
             ctx["selected_level_id"] = self.selected_level
             ctx["level_data"] = self.levels[self.selected_level]
             self.hide_ui = True
-            target_pos = self.car.pos if self.car else None
+            target_pos = self.car.transform.pos if self.car else None
 
             def _finish_transition():
+                print(ctx.get("selected_car"))
                 ctx["gameplay"] = {
                     "camera": self.camera,
                     "level_data": self.levels[self.selected_level],
                     "car": self.car,
-                    "car_data": ctx.get("selected_car"),
                 }
                 if self.continue_action:
                     self.continue_action(ctx)
@@ -86,7 +86,7 @@ class LevelSelectScreen(BaseScreen):
                 self._continue(ctx)
             elif name == "window_resized" and phase == "change":
                 if self.levels:
-                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], camera=self.camera, actors=[self.car] if self.car else None)
+                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=[self.car_actor])
 
         if self.camera_tour and self.levels:
             self.camera_tour.update(dt)
@@ -105,7 +105,7 @@ class LevelSelectScreen(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.levels:
-            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera, actors=[self.car] if self.car else None)
+            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera, actors=[self.car_actor] if self.car_actor else None)
             if not self.hide_ui:
                 line = self.font.render(self.levels[self.selected_level]["name"], True, (255, 255, 255))
                 surf.blit(line, line.get_rect(center=(half_W, 190)))
@@ -152,14 +152,4 @@ class LevelSelectScreen(BaseScreen):
         row = self.levels[self.selected_level]
         self.full_renderer.focus_camera(self.camera, row)
         if self.camera_tour:
-            self.camera_tour.load_level(row)\
-            
-    def compute_car_scale(self, pieces, car_img, *, ref_key="road_1", fraction=0.70):
-        ref = pieces.get(ref_key)
-        if not ref or not car_img:
-            return 1.0
-        road_w, _ = ref.get_size()
-        car_w, _ = car_img.get_size()
-        if car_w <= 0:
-            return 1.0
-        return max(0.01, (road_w * fraction) / car_w)
+            self.camera_tour.load_level(row)
