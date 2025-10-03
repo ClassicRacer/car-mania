@@ -1,3 +1,4 @@
+import math
 import pygame
 
 from game.io.render import end_frame, get_half_screen
@@ -16,6 +17,8 @@ class Gameplay(BaseScreen):
         self.car_actor = None
         self.level_data = None
         self._input_state = {"up": False, "down": False, "left": False, "right": False}
+        self.keep_car_upright = True
+        self._upright_lerp = 0.35
 
     def enter(self, ctx):
         super().enter(ctx)
@@ -44,6 +47,7 @@ class Gameplay(BaseScreen):
         if self.handle_back(ctx, actions):
             return True
 
+        self._process_actions(actions)
         self._update_car_motion(dt)
         self._focus_camera_on_car()
         return True
@@ -60,6 +64,11 @@ class Gameplay(BaseScreen):
         pygame.draw.line(surf, (255, 0, 0), (half_W - 10, half_H), (half_W + 10, half_H), 2)
         pygame.draw.line(surf, (255, 0, 0), (half_W, half_H - 10), (half_W, half_H + 10), 2)
         end_frame()
+
+    @staticmethod
+    def _lerp_deg(a, b, t):
+        d = ((b - a + 180.0) % 360.0) - 180.0
+        return a + d * t
 
     def _focus_camera_on_car(self):
         if not self.camera or not self.car:
@@ -78,6 +87,10 @@ class Gameplay(BaseScreen):
             self.camera.x = pos.x
             self.camera.y = pos.y
 
+        if self.keep_car_upright:
+            target = float(self.car.transform.angle_deg)
+            self.camera.rot_deg = self._lerp_deg(float(self.camera.rot_deg), target, self._upright_lerp)
+
     def _process_actions(self, actions):
         for name, phase, _ in actions:
             if name == "up":
@@ -87,22 +100,37 @@ class Gameplay(BaseScreen):
             if name == "left":
                 self._input_state["left"] = phase == "press"
             elif name == "right":
-                self._input_state["down"] = phase == "press"
+                self._input_state["right"] = phase == "press"
 
     def _update_car_motion(self, dt: float):
         if not self.car or dt <= 0:
             return
+        car = self.car
+        mech = car.mechanics
+        stats = car.stats
+        t = car.transform
+        inp = self._input_state
 
-        forward = 0.0
-        if self._input_state.get("up"):
-            forward += 1.0
-        if self._input_state.get("down"):
-            forward -= 1.0
 
-        if forward == 0.0:
-            return
+        # Throttle / brake
+        throttle = (1.0 if inp.get("up") else 0.0) + (-1.0 if inp.get("down") else 0.0)
+        mech.speed += throttle * stats.acceleration * mech.ACCEL * dt
 
-        direction = pygame.Vector2(1.0, 0.0).rotate(-self.car.angle_deg)
-        displacement = direction * (self.car_data["acceleration"] * forward * dt)
-        new_pos = pygame.Vector2(self.car.pos) + displacement
-        self.car.set_pose((new_pos.x, new_pos.y), self.car.angle_deg)
+        # Clamp speed
+        max_rev = stats.top_speed * 0.5
+        if   mech.speed >  stats.top_speed: mech.speed = stats.top_speed
+        elif mech.speed < -max_rev:          mech.speed = -max_rev
+
+        # Steer (simple and predictable)
+        steer_input = (-1.0 if inp.get("left") else 0.0) + (1.0 if inp.get("right") else 0.0)
+        speed_norm = min(1.0, abs(mech.speed) / max(1e-6, stats.top_speed))
+        authority = mech.STEER_BASE + (1.0 - mech.STEER_BASE) * speed_norm  # linear: some at low speed, not crazy at high
+        mech.angle += steer_input * (stats.handling * mech.STEER * authority) * dt
+
+        # Render angle
+        t.angle_deg = (math.degrees(mech.angle)) % 360.0
+
+        # Move: "0° is up"
+        dx = math.sin(mech.angle) * (mech.speed * mech.MOVE) * dt
+        dy = -math.cos(mech.angle) * (mech.speed * mech.MOVE) * dt
+        t.pos = (t.pos[0] + dx, t.pos[1] + dy)

@@ -3,7 +3,7 @@ from typing import Tuple
 import pygame
 
 @dataclass(frozen=True)
-class CarMechanics:
+class CarStats:
     id: int
     name: str
     top_speed: float
@@ -11,6 +11,17 @@ class CarMechanics:
     handling: float
     offroad: float
     engine_type: int
+
+@dataclass
+class CarMechanics:
+    speed: float = 0.0
+    angle: float = 0.0
+    steer_state: float = 0.0
+
+    ACCEL = 2.0      # multiplies stats.acceleration
+    MOVE  = 50.0     # world movement scale (you liked 50)
+    STEER = 0.9      # overall steering rate (rad/s scale with stats.handling)
+    STEER_BASE = 0.35  # 0..1: baseline steering at low speed
 
 @dataclass
 class Transform:
@@ -33,9 +44,10 @@ class CarActor:
 
 @dataclass
 class Car:
-    mechanics: CarMechanics
+    stats: CarStats
     transform: Transform
     appearance: CarAppearance
+    mechanics: CarMechanics
 
 class CarRenderer:
     def __init__(self):
@@ -79,7 +91,7 @@ def compute_scale(pieces: dict, car_img: pygame.Surface, ref_key: str = "road_1"
 def car_from_dict(selected_car: dict, ctx: dict) -> Car:
     img = selected_car["image_data"].convert_alpha()
     scale = compute_scale(ctx["pieces"], img, ref_key="road_1", fraction=0.35)
-    mech = CarMechanics(
+    mech = CarStats(
         id=int(selected_car["id"]),
         name=str(selected_car["name"]),
         top_speed=float(selected_car["top_speed"]),
@@ -92,4 +104,5 @@ def car_from_dict(selected_car: dict, ctx: dict) -> Car:
     w, h = img.get_size()
     appearance = CarAppearance(image=img, pivot=(w * 0.5, h * 0.5), z_index=int(selected_car.get("z_index", 0)))
     transform = Transform(pos=(0.0, 0.0), angle_deg=0.0, scale=scale)
-    return Car(mechanics=mech, transform=transform, appearance=appearance)
+    mechanics = CarMechanics()
+    return Car(stats=mech, transform=transform, appearance=appearance, mechanics=mechanics)
