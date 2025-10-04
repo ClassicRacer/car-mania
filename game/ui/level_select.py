@@ -131,9 +131,6 @@ class LevelSelectScreen(BaseScreen):
                 surf.blit(img, img.get_rect(center=rect.center))
                 surf.blit(name, name.get_rect(center=(rect.centerx, rect.bottom + 20)))
 
-            pygame.draw.line(surf, (255, 0, 0), (half_W - 10, half_H), (half_W + 10, half_H), 2)
-            pygame.draw.line(surf, (255, 0, 0), (half_W, half_H - 10), (half_W, half_H + 10), 2)
-            
             mp = ctx["get_mouse_pos"]()
             self.continue_button.draw(surf, mp)
             self.draw_back(ctx, surf)

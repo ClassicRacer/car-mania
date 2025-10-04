@@ -60,9 +60,7 @@ class Gameplay(BaseScreen):
             self.full_renderer.render_to(surf, self.level_data, camera=self.camera, actors=[self.car_actor])
         else:
             surf.fill((20, 20, 20))
-
-        pygame.draw.line(surf, (255, 0, 0), (half_W - 10, half_H), (half_W + 10, half_H), 2)
-        pygame.draw.line(surf, (255, 0, 0), (half_W, half_H - 10), (half_W, half_H + 10), 2)
+            
         end_frame()
 
     @staticmethod
@@ -102,6 +100,7 @@ class Gameplay(BaseScreen):
             elif name == "right":
                 self._input_state["right"] = phase == "press"
 
+    # TODO: Move to CarMechanics
     def _update_car_motion(self, dt: float):
         if not self.car or dt <= 0:
             return
@@ -111,26 +110,35 @@ class Gameplay(BaseScreen):
         t = car.transform
         inp = self._input_state
 
-
-        # Throttle / brake
         throttle = (1.0 if inp.get("up") else 0.0) + (-1.0 if inp.get("down") else 0.0)
         mech.speed += throttle * stats.acceleration * mech.ACCEL * dt
 
-        # Clamp speed
         max_rev = stats.top_speed * 0.5
         if   mech.speed >  stats.top_speed: mech.speed = stats.top_speed
         elif mech.speed < -max_rev:          mech.speed = -max_rev
 
-        # Steer (simple and predictable)
-        steer_input = (-1.0 if inp.get("left") else 0.0) + (1.0 if inp.get("right") else 0.0)
-        speed_norm = min(1.0, abs(mech.speed) / max(1e-6, stats.top_speed))
-        authority = mech.STEER_BASE + (1.0 - mech.STEER_BASE) * speed_norm  # linear: some at low speed, not crazy at high
-        mech.angle += steer_input * (stats.handling * mech.STEER * authority) * dt
-
-        # Render angle
+        steer_in = (-1.0 if inp.get("left") else 0.0) + (1.0 if inp.get("right") else 0.0)
+        v_px = mech.speed * mech.MOVE
+        if mech.WHEELBASE_PX <= 0.0:
+            sprite_h = car.appearance.image.get_height()
+            mech.WHEELBASE_PX = max(60.0, sprite_h * car.transform.scale * 0.55)
+        L = mech.WHEELBASE_PX
+        max_deg = min(mech.STEER_MAX_CAP_DEG, mech.STEER_MAX_BASE_DEG + stats.handling * mech.STEER_MAX_GAIN_DEG)
+        delta_max = math.radians(max_deg)
+        target_delta = steer_in * delta_max
+        alpha = 1.0 - math.exp(-mech.STEER_RESP_HZ * dt)
+        mech.steer_angle += (target_delta - mech.steer_angle) * alpha
+        ay_max = mech.AY_MAX_BASE + mech.AY_PER_HANDLING * stats.handling
+        if abs(v_px) > 1e-6:
+            tan_limit = (ay_max * L) / (v_px * v_px)
+            limit_delta = math.atan(max(0.0, tan_limit))
+            delta_eff = max(-limit_delta, min(limit_delta, mech.steer_angle))
+        else:
+            delta_eff = mech.steer_angle
+        omega = (v_px / L) * math.tan(delta_eff)
+        mech.angle += omega * dt
         t.angle_deg = (math.degrees(mech.angle)) % 360.0
 
-        # Move: "0° is up"
         dx = math.sin(mech.angle) * (mech.speed * mech.MOVE) * dt
         dy = -math.cos(mech.angle) * (mech.speed * mech.MOVE) * dt
         t.pos = (t.pos[0] + dx, t.pos[1] + dy)

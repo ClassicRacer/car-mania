@@ -138,8 +138,8 @@ class LevelFullRenderer:
                 target_surface.blit(scaled, top_left)
                 if actors:
                     actors_top_left = (
-                        top_left[0] - int(round(bounds.x * zoom)) - int(round(offset_x * zoom)),
-                        top_left[1] - int(round(bounds.y * zoom)) - int(round(offset_y * zoom)),
+                        top_left[0] - int(round(bounds.x * zoom)),
+                        top_left[1] - int(round(bounds.y * zoom)),
                     )
                     for actor in actors:
                         if hasattr(actor, "render_in_canvas_space"):
@@ -170,8 +170,8 @@ class LevelFullRenderer:
                 target_surface.blit(view, screen_pos)
                 if actors:
                     actors_top_left = (
-                        screen_pos[0] - int(round((view_rect.x + bounds.x) * zoom)) - int(round(offset_x * zoom)),
-                        screen_pos[1] - int(round((view_rect.y + bounds.y) * zoom)) - int(round(offset_y * zoom)),
+                        screen_pos[0] - int(round((view_rect.x + bounds.x) * zoom)),
+                        screen_pos[1] - int(round((view_rect.y + bounds.y) * zoom)),
                     )
                     for actor in actors:
                         if hasattr(actor, "render_in_canvas_space"):
@@ -190,8 +190,8 @@ class LevelFullRenderer:
         canvas.blit(scaled, top_left)
         if actors:
             actors_top_left = (
-                top_left[0] - int(round(bounds.x * zoom)) - int(round(offset_x * zoom)),
-                top_left[1] - int(round(bounds.y * zoom)) - int(round(offset_y * zoom)),
+                top_left[0] - int(round(bounds.x * zoom)),
+                top_left[1] - int(round(bounds.y * zoom)),
             )
             for actor in actors:
                 if hasattr(actor, "render_in_canvas_space"):

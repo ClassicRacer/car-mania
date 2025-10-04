@@ -16,12 +16,17 @@ class CarStats:
 class CarMechanics:
     speed: float = 0.0
     angle: float = 0.0
-    steer_state: float = 0.0
+    steer_angle: float = 0.0 # δ (rad), internal
 
-    ACCEL = 2.0      # multiplies stats.acceleration
-    MOVE  = 50.0     # world movement scale (you liked 50)
-    STEER = 0.9      # overall steering rate (rad/s scale with stats.handling)
-    STEER_BASE = 0.35  # 0..1: baseline steering at low speed
+    MOVE  = 50.0             # px/s per speed unit (keep yours)
+    ACCEL = 2.0
+    STEER_RESP_HZ = 10.0     # how fast δ chases input
+    WHEELBASE_PX = 0.0       # 0 = auto from sprite size
+    STEER_MAX_BASE_DEG = 12.0
+    STEER_MAX_GAIN_DEG = 0.9
+    STEER_MAX_CAP_DEG  = 40.0
+    AY_MAX_BASE = 450.0             # px/s^2 baseline lateral grip
+    AY_PER_HANDLING = 35.0          # +px/s^2 per handling point
 
 @dataclass
 class Transform:
@@ -72,10 +77,10 @@ class CarRenderer:
         total_scale = t.scale * zoom
         spr = self._scaled_sprite(a.image, total_scale)
         rotated = pygame.transform.rotate(spr, -t.angle_deg)
-        rect = rotated.get_rect()
-        x = world_top_left_px[0] + t.pos[0] * zoom - a.pivot[0] * total_scale
-        y = world_top_left_px[1] + t.pos[1] * zoom - a.pivot[1] * total_scale
-        rect.topleft = (int(round(x)), int(round(y)))
+
+        cx = world_top_left_px[0] + t.pos[0] * zoom
+        cy = world_top_left_px[1] + t.pos[1] * zoom
+        rect = rotated.get_rect(center=(int(round(cx)), int(round(cy))))
         canvas.blit(rotated, rect)
 
 def compute_scale(pieces: dict, car_img: pygame.Surface, ref_key: str = "road_1", fraction: float = 0.70) -> float:
@@ -103,6 +108,6 @@ def car_from_dict(selected_car: dict, ctx: dict) -> Car:
     )
     w, h = img.get_size()
     appearance = CarAppearance(image=img, pivot=(w * 0.5, h * 0.5), z_index=int(selected_car.get("z_index", 0)))
-    transform = Transform(pos=(0.0, 0.0), angle_deg=0.0, scale=scale)
+    transform = Transform(pos=(35.0, 0.0), angle_deg=0.0, scale=scale)
     mechanics = CarMechanics()
     return Car(stats=mech, transform=transform, appearance=appearance, mechanics=mechanics)
