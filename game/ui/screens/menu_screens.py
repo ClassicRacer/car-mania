@@ -1,11 +1,11 @@
 import pygame
 from game.io.render import get_half_screen, end_frame
-from game.ui.gameplay import Gameplay
-from game.ui.level_select import LevelSelectScreen
+from game.ui.screens.gameplay import Gameplay
+from game.ui.screens.level_select import LevelSelectScreen
 from game.ui.widgets.button import Button, layout_column, poll_actions_cached
 from game.config.constants import FONT_FILE, ICON_FONT_FILE
-from game.ui.base_screen import BaseScreen
-from game.ui.car_select import CarSelectScreen
+from game.ui.screens.base_screen import BaseScreen
+from game.ui.screens.car_select import CarSelectScreen
 
 class MenuScreen(BaseScreen):
     def __init__(self, title, items, back_action=None):

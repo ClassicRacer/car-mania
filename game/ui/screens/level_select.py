@@ -3,10 +3,11 @@ from game.config.constants import FONT_FILE
 from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour
-from game.render.car import CarRenderer, car_from_dict, CarActor
+from game.render.car_view import CarRenderer, CarActor
+from game.render.factory import car_from_dict
 from game.render.level_preview import LevelPreviewRenderer
 from game.render.level_full import Camera, LevelFullRenderer
-from game.ui.base_screen import BaseScreen
+from game.ui.screens.base_screen import BaseScreen
 from game.ui.widgets.button import Button
 from game.data.queries import fetch_levels
 

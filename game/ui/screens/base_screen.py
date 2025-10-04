@@ -1,5 +1,5 @@
 import pygame
-from game.core.state import Screen
+from game.core.engine.state import Screen
 from game.io.render import resize_physical
 from game.ui.widgets.button import BackControl, poll_actions_cached
 

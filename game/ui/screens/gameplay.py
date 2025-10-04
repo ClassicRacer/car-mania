@@ -2,9 +2,10 @@ import math
 import pygame
 
 from game.io.render import end_frame, get_half_screen
-from game.render.car import CarRenderer, CarActor, DriveInput
+from game.core.model.car import DriveInput
+from game.render.car_view import CarActor, CarRenderer
 from game.render.level_full import Camera, LevelFullRenderer
-from game.ui.base_screen import BaseScreen
+from game.ui.screens.base_screen import BaseScreen
 
 
 class Gameplay(BaseScreen):

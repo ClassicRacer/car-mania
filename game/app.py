@@ -1,8 +1,8 @@
 from pathlib import Path
 from game.io.render import get_mouse_pos_logical, init_display
-from game.core.loop import run
-from game.core.state import Game
-from game.ui.menu_screens import main_menu
+from game.core.engine.loop import run
+from game.core.engine.state import Game
+from game.ui.screens.menu_screens import main_menu
 from game.ui.widgets.button import make_back_draw
 from game.io.assets import load_font, load_image
 from game.io.input import poll_actions

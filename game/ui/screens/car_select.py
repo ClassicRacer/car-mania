@@ -2,7 +2,7 @@ import pygame
 from game.config.constants import FONT_FILE
 from game.io.assets import load_font, load_image
 from game.io.render import get_logical_size, end_frame, get_half_screen
-from game.ui.base_screen import BaseScreen
+from game.ui.screens.base_screen import BaseScreen
 from game.ui.widgets.button import Button
 from game.data.queries import fetch_cars, get_max_stats
 
