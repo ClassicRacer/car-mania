@@ -6,12 +6,19 @@ class LevelPreviewRenderer:
     def __init__(self, pieces: dict, target_size=(480, 270)):
         self.pieces = pieces
         self.size = target_size
+        self._seeds = {}
 
     def render(self, level_row: dict):
         surf = pygame.Surface(self.size, pygame.SRCALPHA)
         bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
         surf.fill(bg)
-        roads, trees, gates, _ = parse_level_code(level_row["code"])
+        cache_key = level_row.get("id")
+        if cache_key is None:
+            cache_key = level_row.get("code")
+        seed = self._seeds.get(cache_key)
+        roads, trees, gates, extra = parse_level_code(level_row["code"], seed=seed)
+        if extra and "seed" in extra and cache_key is not None:
+            self._seeds[cache_key] = extra["seed"]
         bounds = compute_piece_bounds(self.pieces, roads, trees, gates)
         pad = 20
         vw = self.size[0] - pad*2
@@ -34,7 +41,8 @@ class LevelPreviewRenderer:
             r.topleft = pos
             surf.blit(pic, r)
         for t,x,y,ang in roads:
-            img = self.pieces.get(f"road_{t}")
+            key = t if isinstance(t, str) else f"road_{t}"
+            img = self.pieces.get(key)
             if img:
                 blit_scaled(img, to_screen(x,y), ang)
         for order,x,y,ang in gates:

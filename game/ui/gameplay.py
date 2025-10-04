@@ -32,6 +32,9 @@ class Gameplay(BaseScreen):
         self.car = payload.get("car") or self.car
         self.car_actor = CarActor(self.car_renderer, self.car)
 
+        if self.full_renderer and self.level_data:
+            self.full_renderer.refresh_level(self.level_data)
+
         if self.car is None and self.car_data:
             image = self.car_data.get("image_data")
             if image is not None:

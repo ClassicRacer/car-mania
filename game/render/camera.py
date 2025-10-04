@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 import pygame
 
 from game.io.render import get_logical_size
-from game.render.level_utils import parse_level_code
 
 if TYPE_CHECKING:
     from game.render.level_full import LevelFullRenderer
@@ -89,7 +88,7 @@ class CameraTour:
         self.level_center = pygame.Vector2(world.get_width() * 0.5, world.get_height() * 0.5)
         self._level_bounds = bounds.copy()
 
-        _, _, gates, _ = parse_level_code(level_row.get("code", ""))
+        gates = list(entry.get("gates") or [])
         gate_image = self.renderer.pieces.get("gate") if hasattr(self.renderer, "pieces") else None
         if gate_image:
             gx, gy = gate_image.get_size()

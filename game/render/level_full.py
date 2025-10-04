@@ -26,46 +26,81 @@ class LevelFullRenderer:
         self.origin_offset = pygame.Vector2(offset)
         return self.origin_offset
 
-    def _build_world(self, level_row):
-        roads, trees, gates, _ = parse_level_code(level_row["code"])
+    def _build_world(self, level_row, seed=None):
+        code = level_row.get("code", "")
+        seed_to_use = seed if seed is not None else level_row.get("_maze_seed")
+        roads, trees, gates, extra = parse_level_code(code, seed=seed_to_use)
+        if extra and "seed" in extra:
+            actual_seed = extra["seed"]
+        else:
+            actual_seed = seed_to_use
+        if actual_seed is not None:
+            level_row["_maze_seed"] = actual_seed
+
         bounds = compute_piece_bounds(self.pieces, roads, trees, gates)
 
         world = pygame.Surface((bounds.w, bounds.h), pygame.SRCALPHA).convert_alpha()
-        bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
-        world.fill((0,0,0,0))
+        bg = (
+            int(level_row["ground_r"]),
+            int(level_row["ground_g"]),
+            int(level_row["ground_b"]),
+        )
+        world.fill((0, 0, 0, 0))
 
         ox, oy = -bounds.x, -bounds.y
-        for t,x,y,ang in roads:
-            img = self.pieces.get(f"road_{t}")
+        for t, x, y, ang in roads:
+            key = t if isinstance(t, str) else f"road_{t}"
+            img = self.pieces.get(key)
             if img:
-                world.blit(pygame.transform.rotate(img, ang), (x+ox, y+oy))
-        for order,x,y,ang in gates:
+                world.blit(pygame.transform.rotate(img, ang), (x + ox, y + oy))
+        for order, x, y, ang in gates:
             img = self.pieces.get("gate")
             if img:
-                world.blit(pygame.transform.rotate(img, ang), (x+ox, y+oy))
-        for t,x,y in trees:
+                world.blit(pygame.transform.rotate(img, ang), (x + ox, y + oy))
+        for t, x, y in trees:
             img = self.pieces.get(f"tree_{t}")
             if img:
-                world.blit(img, (x+ox, y+oy))
+                world.blit(img, (x + ox, y + oy))
 
-        return world, bounds, bg
+        entry = {
+            "world": world,
+            "bounds": bounds,
+            "bg": bg,
+            "roads": tuple(roads),
+            "trees": tuple(trees),
+            "gates": tuple(gates),
+            "extra": extra,
+            "seed": actual_seed,
+            "scaled_surface": None,
+            "scaled_size": None,
+        }
+        return entry
 
     def _get_world(self, level_row):
         lid = level_row.get("id", None)
         entry = self._cache.get(lid)
         if entry is None:
-            world, bounds, bg = self._build_world(level_row)
-            entry = {
-                "world": world,
-                "bounds": bounds,
-                "bg": bg,
-                "scaled_surface": None,
-                "scaled_size": None,
-            }
+            entry = self._build_world(level_row)
             self._cache[lid] = entry
-        elif "scaled_surface" not in entry:
-            entry["scaled_surface"] = None
-            entry["scaled_size"] = None
+        else:
+            if entry.get("seed") is not None:
+                level_row["_maze_seed"] = entry["seed"]
+            if "scaled_surface" not in entry:
+                entry["scaled_surface"] = None
+            if "scaled_size" not in entry:
+                entry["scaled_size"] = None
+        return entry
+
+    def refresh_level(self, level_row, *, seed=None):
+        lid = level_row.get("id", None)
+        if lid in self._cache:
+            self._cache.pop(lid)
+        if seed is None:
+            level_row.pop("_maze_seed", None)
+        else:
+            level_row["_maze_seed"] = seed
+        entry = self._build_world(level_row, seed=seed)
+        self._cache[lid] = entry
         return entry
 
     def get_piece_bounds(self, level_row):
