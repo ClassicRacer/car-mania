@@ -4,6 +4,12 @@ import pygame
 from game.render.camera import Camera
 from game.render.level_utils import compute_piece_bounds, parse_level_code
 
+def _scaled(img: pygame.Surface, s: float) -> pygame.Surface:
+    if abs(s - 1.0) <= 1e-3:
+        return img
+    w, h = img.get_size()
+    return pygame.transform.smoothscale(img, (max(1, int(round(w*s))), max(1, int(round(h*s)))))
+
 class LevelFullRenderer:
     def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None):
         self.pieces = pieces
@@ -38,29 +44,51 @@ class LevelFullRenderer:
             level_row["_maze_seed"] = actual_seed
 
         bounds = compute_piece_bounds(self.pieces, roads, trees, gates)
+        w, h = bounds.w, bounds.h
+        world = pygame.Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        road_surf = pygame.Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        gate_surf = pygame.Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        tree_surf = pygame.Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        wall_surf  = pygame.Surface((w, h), pygame.SRCALPHA).convert_alpha()
 
-        world = pygame.Surface((bounds.w, bounds.h), pygame.SRCALPHA).convert_alpha()
-        bg = (
-            int(level_row["ground_r"]),
-            int(level_row["ground_g"]),
-            int(level_row["ground_b"]),
-        )
-        world.fill((0, 0, 0, 0))
+        bg = (int(level_row["ground_r"]), int(level_row["ground_g"]), int(level_row["ground_b"]))
+        for s in (world, road_surf, gate_surf, tree_surf, wall_surf):
+            s.fill((0, 0, 0, 0))
 
         ox, oy = -bounds.x, -bounds.y
-        for t, x, y, ang in roads:
+        gate_masks = []
+
+        for t,x,y,ang in roads:
             key = t if isinstance(t, str) else f"road_{t}"
             img = self.pieces.get(key)
-            if img:
-                world.blit(pygame.transform.rotate(img, ang), (x + ox, y + oy))
+            if not img:
+                continue
+            r = pygame.transform.rotate(img, ang)
+            pos = (x+ox, y+oy)
+            world.blit(r, pos)
+            if key in ("road_1", "road_2", "maze_grid"):
+                road_surf.blit(r, pos)
+            elif key == "maze_wall":
+                wall_surf.blit(r, pos)
+
+        gate_img = self.pieces.get("gate") or self.pieces.get("gate_active")
         for order, x, y, ang in gates:
-            img = self.pieces.get("gate")
-            if img:
-                world.blit(pygame.transform.rotate(img, ang), (x + ox, y + oy))
-        for t, x, y in trees:
+            if not gate_img:
+                continue
+            r = pygame.transform.rotate(gate_img, ang)
+            pos = (x + ox, y + oy)
+            world.blit(r, pos)
+            gate_surf.blit(r, pos)
+            grect = r.get_rect(topleft=pos)
+            gmask = pygame.mask.from_surface(r)
+            gate_masks.append((order, gmask, grect))
+
+        for t,x,y in trees:
             img = self.pieces.get(f"tree_{t}")
             if img:
-                world.blit(img, (x + ox, y + oy))
+                pos = (x+ox, y+oy)
+                world.blit(img, pos)
+                tree_surf.blit(img, pos)
 
         entry = {
             "world": world,
@@ -73,8 +101,67 @@ class LevelFullRenderer:
             "seed": actual_seed,
             "scaled_surface": None,
             "scaled_size": None,
+
+            "road_mask": pygame.mask.from_surface(road_surf),
+            "gate_mask": pygame.mask.from_surface(gate_surf),
+            "tree_mask": pygame.mask.from_surface(tree_surf),
+            "wall_mask": pygame.mask.from_surface(wall_surf),
+            "gate_masks": tuple(gate_masks),
         }
         return entry
+    
+    def query_car_contacts(self, level_row, car) -> dict:
+        entry = self._get_world(level_row)
+        bounds = entry["bounds"]
+
+        t = car.transform
+        a = car.appearance
+        img = a.image
+        s = float(t.scale)
+        if abs(s - 1.0) > 1e-3:
+            w, h = img.get_size()
+            spr = pygame.transform.smoothscale(img, (max(1, int(round(w*s))), max(1, int(round(h*s)))))
+        else:
+            spr = img
+
+        rotated = pygame.transform.rotate(spr, -t.angle_deg)
+        cx = int(round(t.pos[0] - bounds.x))
+        cy = int(round(t.pos[1] - bounds.y))
+        rect = rotated.get_rect(center=(cx, cy))
+        car_mask = pygame.mask.from_surface(rotated)
+
+        off = (-rect.left, -rect.top)
+
+        on_road  = bool(car_mask.overlap(entry["road_mask"], off))
+        hit_gate = bool(car_mask.overlap(entry["gate_mask"], off))
+        hit_tree = bool(car_mask.overlap(entry["tree_mask"], off))
+
+        wall_mask = entry.get("wall_mask")
+        hit_wall = False
+        if wall_mask:
+            # treat as "no walls" if the mask is empty
+            has_bits = False
+            if hasattr(wall_mask, "count"):
+                has_bits = wall_mask.count() > 0
+            else:
+                has_bits = len(wall_mask.get_bounding_rects()) > 0
+            if has_bits:
+                hit_wall = bool(car_mask.overlap(wall_mask, off))
+
+        gate_id = None
+        if hit_gate:
+            for gid, gmask, grect in entry["gate_masks"]:
+                if car_mask.overlap(gmask, (grect.left - rect.left, grect.top - rect.top)):
+                    gate_id = gid
+                    break
+
+        return {
+            "on_road": on_road,
+            "hit_tree": hit_tree,
+            "hit_gate": hit_gate,
+            "gate_id": gate_id,
+            "hit_wall": hit_wall,
+        }
 
     def _get_world(self, level_row):
         lid = level_row.get("id", None)

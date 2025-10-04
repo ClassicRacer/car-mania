@@ -19,6 +19,9 @@ class Gameplay(BaseScreen):
         self._input_state = {"up": False, "down": False, "left": False, "right": False, "brake": False}
         self.keep_car_upright = True
         self._upright_lerp = 0.35
+        self._last_contacts = None
+        self.debug_collision_print = True
+
 
     def enter(self, ctx):
         super().enter(ctx)
@@ -53,6 +56,7 @@ class Gameplay(BaseScreen):
         self._process_actions(actions)
         self._update_car_motion(dt)
         self._focus_camera_on_car()
+        self._debug_print_collisions()
         return True
 
     def render(self, ctx):
@@ -125,3 +129,32 @@ class Gameplay(BaseScreen):
             surface_grip=1.0,
             speed_cap_scale=1.0,
         )
+
+    def _debug_print_collisions(self):
+        if not self.debug_collision_print:
+            return
+        if not (self.full_renderer and self.level_data and self.car):
+            return
+
+        contacts = self.full_renderer.query_car_contacts(self.level_data, self.car)
+        if contacts != self._last_contacts:
+            surf = "road" if contacts.get("on_road") else "offroad"
+
+            solids = []
+            if contacts.get("hit_wall"):
+                solids.append("maze_wall")
+            if contacts.get("hit_tree"):
+                solids.append("tree")
+            if contacts.get("hit_gate"):
+                gid = contacts.get("gate_id")
+                solids.append(f"gate:{gid}" if gid is not None else "gate")
+
+            solid_str = "clear" if not solids else "|".join(solids)
+
+            pos = self.car.transform.pos
+            ang = getattr(self.car.transform, "angle_deg", 0.0)
+            v_world = self.car.mechanics.speed * self.car.mechanics.MOVE
+
+            print(f"[contacts] {surf}, {solid_str} | pos=({pos[0]:.1f},{pos[1]:.1f}) ang={ang:.1f}° speed={v_world:.1f}px/s")
+
+            self._last_contacts = contacts

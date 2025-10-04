@@ -27,8 +27,7 @@ def _load_pieces() -> dict:
     gate    = img("checkpoint.png")
     gate_on = img("checkpoint_active.png")
     grid    = img("maze_grid.png")
-    wall_h  = img("maze_wall.png")
-    wall_v  = pygame.transform.rotate(wall_h, 90)
+    maze_wall  = img("maze_wall.png")
     tree_1  = img("tree1.png")
     tree_2  = img("tree2.png")
     tree_3  = img("tree3.png")
@@ -39,7 +38,7 @@ def _load_pieces() -> dict:
         "gate": gate,
         "gate_active": gate_on,
         "maze_grid": grid,
-        "maze_wall": wall_h,
+        "maze_wall": maze_wall,
         "tree_1": tree_1,
         "tree_2": tree_2,
         "tree_3": tree_3,

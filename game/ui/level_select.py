@@ -45,7 +45,7 @@ class LevelSelectScreen(BaseScreen):
             self.selected_level = ctx["selected_level_id"]
         self.camera = Camera()
         self.camera_tour = CameraTour(self.full_renderer, self.camera)
-        self.car = car_from_dict(ctx["selected_car"], ctx)
+        self.car = car_from_dict(ctx.pop("selected_car"), ctx)
         self.car_actor = CarActor(self.car_renderer, self.car)
         if self.levels:
             self._focus_camera_on_selected_level()
@@ -59,7 +59,6 @@ class LevelSelectScreen(BaseScreen):
             target_pos = self.car.transform.pos if self.car else None
 
             def _finish_transition():
-                print(ctx.get("selected_car"))
                 ctx["gameplay"] = {
                     "camera": self.camera,
                     "level_data": self.levels[self.selected_level],

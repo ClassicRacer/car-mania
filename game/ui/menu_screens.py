@@ -81,21 +81,32 @@ def level_creator_menu(game):
     ], back_action=lambda ctx: ctx["game"].set(create_menu(game)))
 
 def go_main_menu(ctx):
+    _debug_ctx(ctx)
     g = ctx["game"]
     g.set(main_menu(g))
 
 def go_create_menu(ctx):
+    _debug_ctx(ctx)
     g = ctx["game"]
     g.set(create_menu(g))
 
 def on_car_selected(ctx, car):
+    _debug_ctx(ctx)
     g = ctx["game"]
     g.set(LevelSelectScreen(back_action=go_car_select, continue_action=on_level_selected))
 
 def go_car_select(ctx):
+    _debug_ctx(ctx)
     g = ctx["game"]
     g.set(CarSelectScreen(back_action=go_main_menu, continue_action=on_car_selected))
 
 def on_level_selected(ctx):
+    _debug_ctx(ctx)
     g = ctx["game"]
     g.set(Gameplay(back_action=go_main_menu))
+
+def _debug_ctx(ctx):
+    import inspect
+    print("*"*20)
+    outer_func = inspect.currentframe().f_back.f_code.co_name
+    print(f"{outer_func}:\n\n{ctx.keys()}")

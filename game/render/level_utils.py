@@ -320,7 +320,6 @@ def _create_gate_entries(cells: List[Tuple[int, int]], origin: Tuple[int, int]):
 
     return gates
 
-
 def _get_piece_image(pieces: dict, typ: object, *, road: bool = False):
     if isinstance(typ, str):
         return pieces.get(typ)
