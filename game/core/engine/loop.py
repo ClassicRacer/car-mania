@@ -1,5 +1,4 @@
 import time
-from game.config.constants import TARGET_FPS
 
 def run(update_fn, render_fn, fps=60):
     dt_target = 1.0 / fps

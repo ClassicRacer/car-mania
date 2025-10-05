@@ -4,7 +4,6 @@ from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour
 from game.render.car_view import CarRenderer, CarActor
-from game.render.factory import car_from_dict
 from game.render.level_preview import LevelPreviewRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen

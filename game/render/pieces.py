@@ -1,4 +1,3 @@
-import pygame
 from game.io.assets import load_image
 
 class Pieces:
