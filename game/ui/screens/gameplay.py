@@ -67,7 +67,11 @@ class Gameplay(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.full_renderer and self.level_data and self.camera:
-            self.full_renderer.render_to(surf, self.level_data, camera=self.camera, actors=self.actors if self.actors else None)
+            self.full_renderer.render_to(
+                surf,self.level_data,
+                camera=self.camera,
+                actors=self.actors if self.actors else None,
+                active_gate_id=self.session.active_gate_id(self.players[0].race) if self.session else None,)
         else:
             surf.fill((20, 20, 20))
             

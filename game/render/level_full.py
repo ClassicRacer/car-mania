@@ -215,7 +215,7 @@ class LevelFullRenderer:
         if reset_rotation:
             camera.rot_deg = 0.0
 
-    def render_to(self, target_surface, level_row, camera=None, actors=None):
+    def render_to(self, target_surface, level_row, camera=None, actors=None, active_gate_id=None):
         tw, th = target_surface.get_size()
 
         entry = self._get_world(level_row)
@@ -277,7 +277,37 @@ class LevelFullRenderer:
                 entry["scaled_occ_size"] = target_size
                 return scaled_o
             return entry["scaled_occ_surface"] or occ
+        
+        def _draw_active_gate(dest, top_left_px, view_rect=None):
+            if active_gate_id is None:
+                return
+            gimg = self.pieces.get("gate_active")
+            if not gimg:
+                return
+            gx = gy = gang = None
+            for order, x, y, ang in entry["gates"]:
+                if order == active_gate_id:
+                    gx, gy, gang = x, y, ang
+                    break
+            if gx is None:
+                return
+            gspr = pygame.transform.rotate(gimg, gang)
+            if abs(zoom - 1.0) > 1e-3:
+                rw, rh = gspr.get_size()
+                gspr = pygame.transform.smoothscale(
+                    gspr, (max(1, int(round(rw * zoom))), max(1, int(round(rh * zoom))))
+                )
 
+            ox, oy = -bounds.x, -bounds.y
+            wx = (gx + ox) * zoom
+            wy = (gy + oy) * zoom
+            if view_rect is not None:
+                wx -= view_rect.x * zoom
+                wy -= view_rect.y * zoom
+
+            grect = gspr.get_rect(topleft=(int(round(top_left_px[0] + wx)), int(round(top_left_px[1] + wy))))
+            dest.blit(gspr, grect)
+            
         target_surface.fill(bg)
 
         cam_x = camera.x - offset_x
@@ -305,6 +335,7 @@ class LevelFullRenderer:
 
                 occ_scaled = scale_occluder(target_scaled_size)
                 target_surface.blit(occ_scaled, top_left)
+                _draw_active_gate(target_surface, top_left)
                 return
             else:
                 pad = 4
@@ -345,6 +376,7 @@ class LevelFullRenderer:
                 if zoom != 1.0:
                     occ_view = pygame.transform.scale(occ_view, scaled_size)
                 target_surface.blit(occ_view, screen_pos)
+                _draw_active_gate(target_surface, screen_pos, view_rect=view_rect)
                 return
 
         diag = int(math.ceil(math.hypot(tw, th)))
@@ -373,5 +405,6 @@ class LevelFullRenderer:
                 if hasattr(actor, "render_in_canvas_space"):
                     actor.render_in_canvas_space(canvas, actors_top_left, zoom)
         canvas.blit(occ_scaled, top_left)
+        _draw_active_gate(canvas, top_left)
         rotated = pygame.transform.rotate(canvas, angle)
         target_surface.blit(rotated, rotated.get_rect(center=pivot))
