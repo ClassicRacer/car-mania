@@ -7,9 +7,10 @@ from game.render.car_view import CarActor, CarRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen
 from game.rules.race import RaceSession
-
+from game.world.collision import CollisionResolver
 
 class Gameplay(BaseScreen):
+
     def __init__(self, back_action=None):
         super().__init__(back_action)
         self.full_renderer = None
@@ -21,10 +22,8 @@ class Gameplay(BaseScreen):
         self._input_state = {"up": False, "down": False, "left": False, "right": False, "brake": False}
         self.keep_car_upright = True
         self._upright_lerp = 0.35
-        self._last_contacts = None
-        self.debug_collision_print = True
         self.session = None
-
+        self.collision = None
 
     def enter(self, ctx):
         super().enter(ctx)
@@ -43,8 +42,7 @@ class Gameplay(BaseScreen):
         gate_order = [order for (order, _, _, _) in sorted(entry["gates"], key=lambda g: g[0])]
         laps = self.level_data["laps"]
         self.session = RaceSession(target_laps=laps, gate_order=gate_order)
-
-
+        self.collision = CollisionResolver()
         self._focus_camera_on_main_player()
 
     def on_resize(self, ctx, size):
@@ -59,7 +57,6 @@ class Gameplay(BaseScreen):
         self._update_car_motion(dt)
         self._update_race(dt)
         self._focus_camera_on_main_player()
-        self._debug_print_collisions()
         return True
 
     def render(self, ctx):
@@ -130,6 +127,7 @@ class Gameplay(BaseScreen):
         )
         contacts = self.full_renderer.query_car_contacts(self.level_data, c)
         is_on_road = bool(contacts.get("on_road"))
+        old_pos = c.transform.pos
         c.mechanics.update(
             dt,
             stats=c.stats,
@@ -140,8 +138,12 @@ class Gameplay(BaseScreen):
             surface_grip=1.0,
             speed_cap_scale=1.0,
         )
+        new_pos = c.transform.pos
+        dx = new_pos[0] - old_pos[0]
+        dy = new_pos[1] - old_pos[1]
+        res = self.collision.resolve(c, old_pos, (dx, dy), dt, self.full_renderer, self.level_data)
+        c.transform.pos = res.pos
 
-    
     def _update_race(self, dt: float):
         if not (self.session and self.players and self.level_data):
             return
@@ -159,33 +161,3 @@ class Gameplay(BaseScreen):
 
             if finished_now:
                 print(f"[race] FINISH! winner={self.session.winner_id} time={self.session.finish_time:.3f}s")
-
-    def _debug_print_collisions(self):
-        if not self.debug_collision_print:
-            return
-        if not (self.full_renderer and self.level_data and self.players):
-            return
-
-        car = self.players[0].car
-        contacts = self.full_renderer.query_car_contacts(self.level_data, car)
-        if contacts != self._last_contacts:
-            surf = "road" if contacts.get("on_road") else "offroad"
-
-            solids = []
-            if contacts.get("hit_wall"):
-                solids.append("maze_wall")
-            if contacts.get("hit_tree"):
-                solids.append("tree")
-            if contacts.get("hit_gate"):
-                gid = contacts.get("gate_id")
-                solids.append(f"gate:{gid}" if gid is not None else "gate")
-
-            solid_str = "clear" if not solids else "|".join(solids)
-
-            pos = car.transform.pos
-            ang = getattr(car.transform, "angle_deg", 0.0)
-            v_world = car.mechanics.speed * car.mechanics.MOVE
-
-            print(f"[contacts] {surf}, {solid_str} | pos=({pos[0]:.1f},{pos[1]:.1f}) ang={ang:.1f}° speed={v_world:.1f}px/s")
-
-            self._last_contacts = contacts
