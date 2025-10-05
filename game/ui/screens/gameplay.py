@@ -6,6 +6,7 @@ from game.core.model.car import DriveInput
 from game.render.car_view import CarActor, CarRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen
+from game.rules.race import RaceSession
 
 
 class Gameplay(BaseScreen):
@@ -22,6 +23,7 @@ class Gameplay(BaseScreen):
         self._upright_lerp = 0.35
         self._last_contacts = None
         self.debug_collision_print = True
+        self.session = None
 
 
     def enter(self, ctx):
@@ -37,8 +39,11 @@ class Gameplay(BaseScreen):
         self.players = list(payload.get("players") or ctx.get("players") or [])
         self.actors = [CarActor(self.car_renderer, p.car) for p in self.players if getattr(p, "car", None)]
 
-        if self.full_renderer and self.level_data:
-            self.full_renderer.refresh_level(self.level_data)
+        entry = self.full_renderer._get_world(self.level_data)
+        gate_order = [order for (order, _, _, _) in sorted(entry["gates"], key=lambda g: g[0])]
+        laps = self.level_data["laps"]
+        self.session = RaceSession(target_laps=laps, gate_order=gate_order)
+
 
         self._focus_camera_on_main_player()
 
@@ -52,6 +57,7 @@ class Gameplay(BaseScreen):
 
         self._process_actions(actions)
         self._update_car_motion(dt)
+        self._update_race(dt)
         self._focus_camera_on_main_player()
         self._debug_print_collisions()
         return True
@@ -130,6 +136,25 @@ class Gameplay(BaseScreen):
             surface_grip=1.0,
             speed_cap_scale=1.0,
         )
+
+    
+    def _update_race(self, dt: float):
+        if not (self.session and self.players and self.level_data):
+            return
+
+        self.session.tick(dt)
+
+        for p in self.players:
+            contacts = self.full_renderer.query_car_contacts(self.level_data, p.car)
+            gate_id = contacts.get("gate_id")
+            finished_now = self.session.step_player(p.id, p.race, gate_id)
+
+            # simple debug prints
+            if gate_id is not None:
+                print(f"[race] player={p.id} hit gate {gate_id} | cleared={p.race.gates_cleared} lap={p.race.laps_completed}")
+
+            if finished_now:
+                print(f"[race] FINISH! winner={self.session.winner_id} time={self.session.finish_time:.3f}s")
 
     def _debug_print_collisions(self):
         if not self.debug_collision_print:
