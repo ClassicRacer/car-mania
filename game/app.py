@@ -64,6 +64,7 @@ def main():
         "selected_car_id": -1,
         "selected_level_id": -1,
         "pieces": _load_pieces(),
+        "players": []
     }
     game = Game(ctx)
     ctx["game"] = game

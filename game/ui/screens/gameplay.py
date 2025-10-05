@@ -14,9 +14,9 @@ class Gameplay(BaseScreen):
         self.full_renderer = None
         self.car_renderer = CarRenderer()
         self.camera = None
-        self.car = None
-        self.car_actor = None
         self.level_data = None
+        self.players = []
+        self.actors = []
         self._input_state = {"up": False, "down": False, "left": False, "right": False, "brake": False}
         self.keep_car_upright = True
         self._upright_lerp = 0.35
@@ -33,18 +33,14 @@ class Gameplay(BaseScreen):
 
         self.level_data = payload.get("level_data") or ctx.get("level_data") or self.level_data
         self.camera = payload.get("camera") or self.camera or Camera()
-        self.car = payload.get("car") or self.car
-        self.car_actor = CarActor(self.car_renderer, self.car)
+        
+        self.players = list(payload.get("players") or ctx.get("players") or [])
+        self.actors = [CarActor(self.car_renderer, p.car) for p in self.players if getattr(p, "car", None)]
 
         if self.full_renderer and self.level_data:
             self.full_renderer.refresh_level(self.level_data)
 
-        if self.car is None and self.car_data:
-            image = self.car_data.get("image_data")
-            if image is not None:
-                self.car = CarRenderer(image, pos=(0.0, 0.0))
-
-        self._focus_camera_on_car()
+        self._focus_camera_on_main_player()
 
     def on_resize(self, ctx, size):
         super().on_resize(ctx, size)
@@ -56,7 +52,7 @@ class Gameplay(BaseScreen):
 
         self._process_actions(actions)
         self._update_car_motion(dt)
-        self._focus_camera_on_car()
+        self._focus_camera_on_main_player()
         self._debug_print_collisions()
         return True
 
@@ -65,7 +61,7 @@ class Gameplay(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.full_renderer and self.level_data and self.camera:
-            self.full_renderer.render_to(surf, self.level_data, camera=self.camera, actors=[self.car_actor])
+            self.full_renderer.render_to(surf, self.level_data, camera=self.camera, actors=self.actors if self.actors else None)
         else:
             surf.fill((20, 20, 20))
             
@@ -76,10 +72,13 @@ class Gameplay(BaseScreen):
         d = ((b - a + 180.0) % 360.0) - 180.0
         return a + d * t
 
-    def _focus_camera_on_car(self):
-        if not self.camera or not self.car:
+    def _focus_camera_on_main_player(self):
+        if not (self.camera and self.players):
             return
-        pos = pygame.Vector2(self.car.transform.pos)
+        car = self.players[0].car
+        if not getattr(self.players[0], "car", None):
+            return
+        pos = pygame.Vector2(car.transform.pos)
 
         if self.full_renderer and self.level_data:
             bounds = self.full_renderer.get_piece_bounds(self.level_data)
@@ -94,7 +93,7 @@ class Gameplay(BaseScreen):
             self.camera.y = pos.y
 
         if self.keep_car_upright:
-            target = float(self.car.transform.angle_deg)
+            target = float(car.transform.angle_deg)
             self.camera.rot_deg = self._lerp_deg(float(self.camera.rot_deg), target, self._upright_lerp)
 
     def _process_actions(self, actions):
@@ -111,9 +110,7 @@ class Gameplay(BaseScreen):
                 self._input_state["brake"] = phase == "press"
 
     def _update_car_motion(self, dt: float):
-        if not self.car:
-            return
-        c = self.car
+        c = self.players[0].car
         controls = DriveInput(
             up=self._input_state.get("up", False),
             down=self._input_state.get("down", False),
@@ -134,10 +131,11 @@ class Gameplay(BaseScreen):
     def _debug_print_collisions(self):
         if not self.debug_collision_print:
             return
-        if not (self.full_renderer and self.level_data and self.car):
+        if not (self.full_renderer and self.level_data and self.players):
             return
 
-        contacts = self.full_renderer.query_car_contacts(self.level_data, self.car)
+        car = self.players[0].car
+        contacts = self.full_renderer.query_car_contacts(self.level_data, car)
         if contacts != self._last_contacts:
             surf = "road" if contacts.get("on_road") else "offroad"
 
@@ -152,9 +150,9 @@ class Gameplay(BaseScreen):
 
             solid_str = "clear" if not solids else "|".join(solids)
 
-            pos = self.car.transform.pos
-            ang = getattr(self.car.transform, "angle_deg", 0.0)
-            v_world = self.car.mechanics.speed * self.car.mechanics.MOVE
+            pos = car.transform.pos
+            ang = getattr(car.transform, "angle_deg", 0.0)
+            v_world = car.mechanics.speed * car.mechanics.MOVE
 
             print(f"[contacts] {surf}, {solid_str} | pos=({pos[0]:.1f},{pos[1]:.1f}) ang={ang:.1f}° speed={v_world:.1f}px/s")
 

@@ -2,6 +2,8 @@ import pygame
 from game.config.constants import FONT_FILE
 from game.io.assets import load_font, load_image
 from game.io.render import get_logical_size, end_frame, get_half_screen
+from game.render.factory import car_from_dict
+from game.rules.race import Player
 from game.ui.screens.base_screen import BaseScreen
 from game.ui.widgets.button import Button
 from game.data.queries import fetch_cars, get_max_stats
@@ -41,7 +43,8 @@ class CarSelectScreen(BaseScreen):
     def _continue(self, ctx):
         ctx["selected_car_id"] = self.selected_car
         selected = self.cars[self.selected_car] if self.cars else None
-        ctx["selected_car"] = selected
+        player = Player(0, car_from_dict(selected, ctx))
+        ctx["players"][:] = [player]
         if self.continue_action and selected:
             self.continue_action(ctx, selected)
 

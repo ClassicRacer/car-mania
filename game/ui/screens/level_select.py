@@ -25,9 +25,9 @@ class LevelSelectScreen(BaseScreen):
         self.camera = None
         self.margin = margin
         self.camera_tour = None
-        self.car = None
+        self.players = []
         self.car_renderer = CarRenderer()
-        self.car_actor = None
+        self.actors = []
         self.hide_ui = False
 
     def enter(self, ctx):
@@ -46,24 +46,27 @@ class LevelSelectScreen(BaseScreen):
             self.selected_level = ctx["selected_level_id"]
         self.camera = Camera()
         self.camera_tour = CameraTour(self.full_renderer, self.camera)
-        self.car = car_from_dict(ctx.pop("selected_car"), ctx)
-        self.car_actor = CarActor(self.car_renderer, self.car)
+
+        self.players = list(ctx.get("players", []))
+        self.actors = [CarActor(self.car_renderer, p.car) for p in self.players if getattr(p, "car", None)]
         if self.levels:
             self._focus_camera_on_selected_level()
-            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=[self.car_actor])
+            self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=self.actors if self.actors else None)
 
     def _continue(self, ctx):
         if self.levels:
             ctx["selected_level_id"] = self.selected_level
             ctx["level_data"] = self.levels[self.selected_level]
             self.hide_ui = True
-            target_pos = self.car.transform.pos if self.car else None
+            target_pos = None
+            if self.players and getattr(self.players[0], "car", None):
+                target_pos = self.players[0].car.transform.pos
 
             def _finish_transition():
                 ctx["gameplay"] = {
                     "camera": self.camera,
                     "level_data": self.levels[self.selected_level],
-                    "car": self.car,
+                    "players": self.players,
                 }
                 if self.continue_action:
                     self.continue_action(ctx)
@@ -105,7 +108,7 @@ class LevelSelectScreen(BaseScreen):
         half_W, half_H = get_half_screen()
 
         if self.levels:
-            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera, actors=[self.car_actor] if self.car_actor else None)
+            self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera, actors=self.actors if self.actors else None)
             if not self.hide_ui:
                 line = self.font.render(self.levels[self.selected_level]["name"], True, (255, 255, 255))
                 surf.blit(line, line.get_rect(center=(half_W, 190)))
