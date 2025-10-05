@@ -89,7 +89,7 @@ class LevelSelectScreen(BaseScreen):
                 self._continue(ctx)
             elif name == "window_resized" and phase == "change":
                 if self.levels:
-                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=[self.car_actor])
+                    self.full_renderer.render_to(pygame.Surface((1, 1)), self.levels[self.selected_level], self.camera, actors=self.actors if self.actors else None)
 
         if self.camera_tour and self.levels:
             self.camera_tour.update(dt)

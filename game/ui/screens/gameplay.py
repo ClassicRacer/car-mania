@@ -118,12 +118,15 @@ class Gameplay(BaseScreen):
             right=self._input_state.get("right", False),
             brake=self._input_state.get("brake", False),
         )
+        contacts = self.full_renderer.query_car_contacts(self.level_data, c)
+        is_on_road = bool(contacts.get("on_road"))
         c.mechanics.update(
             dt,
             stats=c.stats,
             transform=c.transform,
             inputs=controls,
             sprite_height_px=c.appearance.image.get_height(),
+            on_road=is_on_road,
             surface_grip=1.0,
             speed_cap_scale=1.0,
         )

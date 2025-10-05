@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple, TYPE_CHECKING
 import math
-import pygame
 
 if TYPE_CHECKING:
     from game.render.car_view import CarAppearance
@@ -15,16 +14,6 @@ class CarStats:
     handling: float
     offroad: float
     engine_type: int
-
-# class HasTransform(Protocol):
-#     pos: tuple[float, float]
-#     angle_deg: float
-#     scale: float
-
-# class HasStats(Protocol):
-#     top_speed: float
-#     acceleration: float
-#     handling: float
 
 @dataclass(frozen=True)
 class DriveInput:
@@ -71,7 +60,11 @@ class CarMechanics:
 
     BRAKE_POWER = 3.0
 
-    def update(self, dt, stats, transform, inputs: DriveInput, *, sprite_height_px: int, surface_grip: float = 1.0, speed_cap_scale: float = 1.0):
+    DRAG_OFFROAD_MAX = 2.8
+    DRAG_OFFROAD_SPEED_BIAS = 0.35
+    SPEED_EPS = 0.003
+
+    def update(self, dt, stats, transform, inputs: DriveInput, *, sprite_height_px: int, on_road: bool = True, surface_grip: float = 1.0, speed_cap_scale: float = 1.0):
         if dt <= 0.0:
             return
         if not hasattr(self, "steer_state"):
@@ -90,6 +83,22 @@ class CarMechanics:
         rev_cap = -(top * self.REVERSE_CAP)
         if self.speed > top: self.speed = top
         if self.speed < rev_cap: self.speed = rev_cap
+
+        if not on_road:
+            off = max(1.0, min(5.0, float(stats.offroad)))
+            t = (off - 1.0) / 4.0
+            c_drag = (1.0 - t) * self.DRAG_OFFROAD_MAX
+
+            s_norm = 0.0 if top <= 1e-6 else min(1.0, abs(self.speed) / top)
+            c_drag *= (self.DRAG_OFFROAD_SPEED_BIAS + (1.0 - self.DRAG_OFFROAD_SPEED_BIAS) * s_norm)
+
+            if surface_grip > 0.0:
+                c_drag *= (1.0 / surface_grip)
+
+            self.speed *= math.exp(-c_drag * dt)
+
+        if abs(self.speed) < self.SPEED_EPS:
+            self.speed = 0.0
 
         v_px = self.speed * self.MOVE
         s = 0.0 if stats.top_speed <= 1e-6 else min(1.0, abs(self.speed) / stats.top_speed)
