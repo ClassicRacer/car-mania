@@ -1,5 +1,5 @@
 import pygame
-from game.config.constants import FONT_FILE
+from game.app import FONT_FILE
 from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour

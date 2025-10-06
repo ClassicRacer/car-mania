@@ -1,6 +1,7 @@
 from pathlib import Path
 from functools import lru_cache
-from game.config.constants import ASSETS_DIR
+
+ASSETS_DIR = "game/assets"
 
 ROOT = Path(ASSETS_DIR)
 

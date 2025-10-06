@@ -11,6 +11,9 @@ from game.data.store import open_db
 
 import os, pygame
 
+DB_FILE = "data/carmania.db"
+FONT_FILE = "font.ttf"
+ICON_FONT_FILE = "icons.ttf"
 
 def _load_pieces() -> dict:
     base = Path("game/assets/images")
