@@ -136,7 +136,6 @@ class Gameplay(BaseScreen):
             sprite_height_px=c.appearance.image.get_height(),
             on_road=is_on_road,
             surface_grip=1.0,
-            speed_cap_scale=1.0,
         )
         new_pos = c.transform.pos
         dx = new_pos[0] - old_pos[0]

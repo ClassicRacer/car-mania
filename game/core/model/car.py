@@ -53,7 +53,7 @@ class CarMechanics:
     MAX_YAW_RPS = 2.10
 
     INPUT_SHAPE_POW = 1.35
-    REVERSE_CAP = 0.5
+    REVERSE_CAP = 0.15
 
     STEER_START_NORM = 0.02
     STEER_FULL_NORM  = 0.12
@@ -64,7 +64,7 @@ class CarMechanics:
     DRAG_OFFROAD_SPEED_BIAS = 0.35
     SPEED_EPS = 0.003
 
-    def update(self, dt, stats, transform, inputs: DriveInput, *, sprite_height_px: int, on_road: bool = True, surface_grip: float = 1.0, speed_cap_scale: float = 1.0):
+    def update(self, dt, stats, transform, inputs: DriveInput, *, sprite_height_px: int, on_road: bool = True, surface_grip: float = 1.0):
         if dt <= 0.0:
             return
         if not hasattr(self, "steer_state"):
@@ -79,7 +79,7 @@ class CarMechanics:
             elif self.speed < 0.0:
                 self.speed = min(0.0, self.speed + decel)
 
-        top = stats.top_speed * speed_cap_scale
+        top = stats.top_speed
         rev_cap = -(top * self.REVERSE_CAP)
         if self.speed > top: self.speed = top
         if self.speed < rev_cap: self.speed = rev_cap
