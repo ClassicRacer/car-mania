@@ -56,10 +56,6 @@ class LevelSelectScreen(BaseScreen):
         if self.levels:
             ctx["selected_level_id"] = self.selected_level
             ctx["level_data"] = self.levels[self.selected_level]
-            self.hide_ui = True
-            target_pos = None
-            if self.players and getattr(self.players[0], "car", None):
-                target_pos = self.players[0].car.transform.pos
 
             def _finish_transition():
                 ctx["gameplay"] = {
@@ -70,7 +66,14 @@ class LevelSelectScreen(BaseScreen):
                 if self.continue_action:
                     self.continue_action(ctx)
 
-            self.camera_tour.begin_gameplay(target_pos, 1.5, on_complete=_finish_transition)
+            target_pos = None
+            if self.players and getattr(self.players[0], "car", None):
+                target_pos = self.players[0].car.transform.pos                  
+            if not self.hide_ui:
+                self.hide_ui = True
+                self.camera_tour.begin_gameplay(target_pos, 1.5, on_complete=_finish_transition)
+            else:
+                self.camera_tour.skip_to_gameplay(target_pos, 1.5, on_complete=_finish_transition)
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
@@ -78,10 +81,10 @@ class LevelSelectScreen(BaseScreen):
             return False
         mp = ctx["get_mouse_pos"]()
         for name, phase, payload in actions:
-            if name == "right" and phase == "press":
+            if name == "right" and phase == "press" and not self.hide_ui:
                 self.selected_level = (self.selected_level + 1) % len(self.levels)
                 self._focus_camera_on_selected_level()
-            elif name == "left" and phase == "press":
+            elif name == "left" and phase == "press" and not self.hide_ui:
                 self.selected_level = (self.selected_level - 1) % len(self.levels)
                 self._focus_camera_on_selected_level()
             elif name == "enter" and phase == "press":

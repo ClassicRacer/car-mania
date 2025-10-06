@@ -362,6 +362,33 @@ class CameraTour:
                 self._dispatch_gameplay_complete()
                 return True
         return False
+    
+    def skip_to_gameplay(self, car_pos, target_zoom=None, on_complete=None):
+        if car_pos is None:
+            car_vec = pygame.Vector2(self.camera.x, self.camera.y)
+        else:
+            src_pos = getattr(car_pos, "pos", car_pos)
+            car_vec = pygame.Vector2(src_pos)
+            if self._level_bounds is not None:
+                car_vec.x -= self._level_bounds.x
+                car_vec.y -= self._level_bounds.y
+
+        self.camera.x = car_vec.x
+        self.camera.y = car_vec.y
+        self.camera.zoom = self._clamp_zoom(self.camera.zoom if target_zoom is None else float(target_zoom))
+        self.camera.rot_deg = 0.0
+
+        self.state = "idle"
+        self.timer = 0.0
+        self._gameplay_progress = 1.0
+        self._gameplay_duration = 0.0
+        self._gameplay_on_complete = None
+
+        if on_complete:
+            on_complete()
+
+        return True
+
 
     def _update_gameplay_motion(self, dt: float) -> bool:
         if self._gameplay_duration <= 1e-6:
