@@ -1,6 +1,7 @@
 from game.io.render import get_half_screen, end_frame
 from game.ui.screens.gameplay import Gameplay
 from game.ui.screens.level_select import LevelSelectScreen
+from game.ui.utils import draw_text
 from game.ui.widgets.button import Button, layout_column
 from game.ui.screens.base_screen import BaseScreen
 from game.ui.screens.car_select import CarSelectScreen
@@ -42,8 +43,7 @@ class MenuScreen(BaseScreen):
     def render(self, ctx):
         surf = ctx["window"]
         surf.fill((10,10,10))
-        t = self.title_font.render(self.title, True, (255,255,255))
-        surf.blit(t, t.get_rect(center=(get_half_screen()[0], 120)))
+        draw_text(surf, self.title, self.title_font, (255, 255, 255), (get_half_screen()[0], 120), centered=True)
         mp = ctx["get_mouse_pos"]()
         self.draw_back(ctx, surf)
         for b in self.buttons:

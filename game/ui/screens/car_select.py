@@ -1,10 +1,10 @@
 import pygame
-from game.app import FONT_FILE
 from game.io.assets import load_font, load_image
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.factory import car_from_dict
 from game.rules.race import Player
 from game.ui.screens.base_screen import BaseScreen
+from game.ui.utils import draw_text
 from game.ui.widgets.button import Button
 from game.data.queries import fetch_cars, get_max_stats
 
@@ -73,12 +73,10 @@ class CarSelectScreen(BaseScreen):
         W, H = get_logical_size()
         half_W, half_H = get_half_screen()
 
-        title = self.title_font.render("Select Car", True, (255, 255, 255))
-        surf.blit(title, title.get_rect(center=(half_W, 100)))
+        draw_text(surf, "Select Car", self.title_font, (255, 255, 255), (get_half_screen()[0], 100), centered=True)
 
         if self.cars:
-            title = self.font.render(self.cars[self.selected_car]["name"], True, (255, 255, 255))
-            surf.blit(title, title.get_rect(center=(half_W, 190)))
+            draw_text(surf, self.cars[self.selected_car]["name"], self.font, (255, 255, 255), (get_half_screen()[0], 190), centered=True)
 
         stat_x = 60
         bar_w = 300
@@ -88,8 +86,7 @@ class CarSelectScreen(BaseScreen):
         surf.blit(overlay, (stat_x - 20, half_H // 1.3))
 
         for idx, (label, stat) in enumerate(zip(["Top Speed", "Acceleration", "Handling", "Offroad"], ["top_speed", "acceleration", "handling", "offroad"])):
-            render = self.font.render(label, True, (255, 255, 255))
-            surf.blit(render, (stat_x, (half_H // 1.3) + idx * 60))
+            draw_text(surf, label, self.font, (255, 255, 255), (stat_x, (half_H // 1.3) + idx * 60))
             value = self.cars[self.selected_car][stat] if self.cars else 0
             max_value = self.max_stats[f"max_{stat}"] if self.max_stats else 1
             bar_h = 10
@@ -97,8 +94,7 @@ class CarSelectScreen(BaseScreen):
             pygame.draw.rect(surf, (128, 128, 128), (stat_x, y, bar_w, bar_h))
             fill_w = int((value / max_value) * bar_w) if max_value > 0 else 0
             pygame.draw.rect(surf, (255, 255, 255), (stat_x, y, fill_w, bar_h))
-            stat_text = self.font.render(f"{round((value / max_value) * 10, 1)}", True, (255, 255, 255))
-            surf.blit(stat_text, stat_text.get_rect(center=(stat_x + bar_w + 40, y + bar_h // 2)))
+            draw_text(surf, f"{round((value / max_value) * 10, 1)}", self.font, (255, 255, 255), (stat_x + bar_w + 40, y + bar_h // 2), centered=True)
 
         if self.cars:
             img = self.cars[self.selected_car]["image_data"] if self.cars else None
@@ -113,7 +109,6 @@ class CarSelectScreen(BaseScreen):
 
         for idx, car in enumerate(self.cars):
             img = self._scale_image(car["image_data"], self.tile_size)
-            name = self.card_font.render(car["name"], True, (255, 255, 255))
             rect = pygame.Rect(0, 0, slot_w, slot_h)
             rect.center = (pad + slot_w*idx + slot_w//2, y)
             if idx == self.selected_car:
@@ -121,7 +116,7 @@ class CarSelectScreen(BaseScreen):
                 pygame.draw.rect(overlay, (50, 50, 50, 180), overlay.get_rect(), border_radius=8)
                 surf.blit(overlay, (rect.x - 10, rect.y - 10))
             surf.blit(img, img.get_rect(center=rect.center))
-            surf.blit(name, name.get_rect(center=(rect.centerx, rect.bottom + 20)))
+            draw_text(surf, car["name"], self.subtitle_font, (255, 255, 255), (rect.centerx, rect.bottom + 20), centered=True)
 
         mp = ctx["get_mouse_pos"]()
         self.continue_button.draw(surf, mp)

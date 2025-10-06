@@ -1,5 +1,4 @@
 import pygame
-from game.app import FONT_FILE
 from game.io.assets import load_font
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.camera import CameraTour
@@ -7,6 +6,7 @@ from game.render.car_view import CarRenderer, CarActor
 from game.render.level_preview import LevelPreviewRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen
+from game.ui.utils import draw_text
 from game.ui.widgets.button import Button
 from game.data.queries import fetch_levels
 
@@ -110,12 +110,10 @@ class LevelSelectScreen(BaseScreen):
         if self.levels:
             self.full_renderer.render_to(surf, self.levels[self.selected_level], camera=self.camera, actors=self.actors if self.actors else None)
             if not self.hide_ui:
-                line = self.font.render(self.levels[self.selected_level]["name"], True, (255, 255, 255))
-                surf.blit(line, line.get_rect(center=(half_W, 190)))
+                draw_text(surf, self.levels[self.selected_level]["name"], self.font, (255, 255, 255), (half_W, 190), centered=True)
 
         if not self.hide_ui:
-            title = self.title_font.render("Select Level", True, (255, 255, 255))
-            surf.blit(title, title.get_rect(center=(half_W, 100)))
+            draw_text(surf, "Select Level", self.title_font, (255, 255, 255), (half_W, 100), centered=True)
 
             N = max(1, len(self.levels))
             pad = self.margin
@@ -124,7 +122,6 @@ class LevelSelectScreen(BaseScreen):
             y = H - 150
             for idx, (row, thumb) in enumerate(zip(self.levels, self.thumbs)):
                 img = self._scale_image(thumb, self.thumb_size)
-                name = self.card_font.render(row["name"], True, (255, 255, 255))
                 rect = pygame.Rect(0, 0, slot_w, slot_h)
                 rect.center = (pad + slot_w*idx + slot_w//2, y)
                 if idx == self.selected_level:
@@ -132,7 +129,7 @@ class LevelSelectScreen(BaseScreen):
                     pygame.draw.rect(overlay, (50, 50, 50, 180), overlay.get_rect(), border_radius=8)
                     surf.blit(overlay, (rect.x - 10, rect.y - 10))
                 surf.blit(img, img.get_rect(center=rect.center))
-                surf.blit(name, name.get_rect(center=(rect.centerx, rect.bottom + 20)))
+                draw_text(surf, row["name"], self.subtitle_font, (255, 255, 255), (rect.centerx, rect.bottom + 20), centered=True)
 
             mp = ctx["get_mouse_pos"]()
             self.continue_button.draw(surf, mp)

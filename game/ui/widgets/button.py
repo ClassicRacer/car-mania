@@ -1,4 +1,5 @@
 import pygame
+from game.ui.utils import draw_text
 
 class Button:
     def __init__(self, rect, text, font, fg, bg, hover, callback=None):
@@ -40,11 +41,7 @@ class Button:
         m = self.rect.collidepoint(mouse_pos)
         color = self.hover if m else self.bg
         pygame.draw.rect(surface, color, self.rect, border_radius=8)
-        if not self._surf:
-            self._surf = self.font.render(self.text, True, self.fg)
-        if self._pos is None:
-            self._pos = self._surf.get_rect(center=self.rect.center)
-        surface.blit(self._surf, self._pos)
+        draw_text(surface, self.text, self.font, self.fg, self.rect.center, centered=True)
     
     def clicked(self, mouse_pos, mouse_clicked):
         return self.rect.collidepoint(mouse_pos) and mouse_clicked
@@ -55,8 +52,6 @@ def layout_column(center_x, top_y, size, spacing, buttons):
         x = center_x - w // 2
         y = int(top_y + i * (h + spacing))
         b.set_rect((x, y, w, h))
-    
-import pygame
 
 def poll_actions_cached(ctx):
     a = ctx.get("_actions_cache")
@@ -93,7 +88,6 @@ class BackControl:
 
 def make_back_draw(icon_font, text_font):
     def draw(surf, mp, rect, pressed=False):
-        import pygame
         hovering = rect.collidepoint(mp)
         bg = (30,30,30)
         if hovering and not pressed:
