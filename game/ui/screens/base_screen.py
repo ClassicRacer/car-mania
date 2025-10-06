@@ -1,3 +1,4 @@
+import pygame
 from game.core.engine.state import Screen
 from game.io.render import resize_physical
 from game.ui.widgets.button import BackControl, poll_actions_cached
@@ -14,6 +15,7 @@ class BaseScreen(Screen):
         self.seq = ctx["screen_seq"]
         self.font = ctx["fonts"]["ui"]
         self.title_font = ctx["fonts"]["title"]
+        self.subtitle_font = ctx["fonts"]["subtitle"]
         if self.back:
             self.back.enter(ctx)
 

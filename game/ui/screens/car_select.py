@@ -11,7 +11,6 @@ from game.data.queries import fetch_cars, get_max_stats
 class CarSelectScreen(BaseScreen):
     def __init__(self, back_action=None, continue_action=None, tile_size=(150,150), margin=24):
         super().__init__(back_action)
-        self.card_font = None
         self.selected_car = 0
         self.cars = []
         self.max_stats = {}
@@ -23,7 +22,6 @@ class CarSelectScreen(BaseScreen):
 
     def enter(self, ctx):
         super().enter(ctx)
-        self.card_font = load_font(FONT_FILE, 20)
         self.cars = fetch_cars(ctx["db"], ctx["profile_id"])
         self.max_stats = get_max_stats(ctx["db"], ctx["profile_id"])
         self.continue_button = Button((1500,513,300,64), "Continue", self.font, (255,255,255), (30,30,30), (50,50,50), callback=lambda c: self._continue(c))

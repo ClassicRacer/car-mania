@@ -13,7 +13,6 @@ from game.data.queries import fetch_levels
 class LevelSelectScreen(BaseScreen):
     def __init__(self, back_action=None, continue_action=None, thumb_size=(150, 150), margin=24):
         super().__init__(back_action)
-        self.card_font = None
         self.selected_level = 0
         self.levels = []
         self.thumbs = []
@@ -31,7 +30,6 @@ class LevelSelectScreen(BaseScreen):
 
     def enter(self, ctx):
         super().enter(ctx)
-        self.card_font = load_font(FONT_FILE, 20)
         self.levels = fetch_levels(ctx["db"], ctx["profile_id"])
         renderer = LevelPreviewRenderer(ctx["pieces"], target_size=(360, 220))
         self.full_renderer = LevelFullRenderer(ctx["pieces"])
