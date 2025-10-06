@@ -38,7 +38,7 @@ class CarMechanics:
     steer_angle: float = 0.0 
 
     MOVE = 50.0
-    ACCEL = 1.0
+    ACCEL = 0.55
 
     STEER_RESP_HZ = 10.0
     TURN_GAIN = 0.60
