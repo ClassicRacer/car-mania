@@ -1,6 +1,8 @@
 from game.io.render import get_half_screen, end_frame
+from game.ui.screens.credits import Credits
 from game.ui.screens.gameplay import Gameplay
 from game.ui.screens.level_select import LevelSelectScreen
+from game.ui.screens.pause_menu import PauseMenu
 from game.ui.utils import draw_text
 from game.ui.widgets.button import Button, layout_column
 from game.ui.screens.base_screen import BaseScreen
@@ -53,8 +55,9 @@ class MenuScreen(BaseScreen):
 def main_menu(game):
     return MenuScreen("Car Mania", [
         ("Play",     go_car_select),
-        ("Create",   go_create_menu),
-        ("Options",  None),
+        # ("Create",   go_create_menu),
+        # ("Options",  None),
+        ("Credits", go_credits),
         ("Quit",     lambda ctx: ctx.update({"quit": True})),
     ])
 
@@ -87,7 +90,11 @@ def go_create_menu(ctx):
     g = ctx["game"]
     g.set(create_menu(g))
 
-def go_level_select(ctx, car):
+def go_credits(ctx):
+    g = ctx["game"]
+    g.set(Credits(back_action=go_main_menu, continue_action=go_main_menu))
+
+def go_level_select(ctx):
     g = ctx["game"]
     g.set(LevelSelectScreen(back_action=go_car_select, continue_action=go_gameplay))
 

@@ -73,7 +73,7 @@ class CarSelectScreen(BaseScreen):
         W, H = get_logical_size()
         half_W, half_H = get_half_screen()
 
-        draw_text(surf, "Select Car", self.title_font, (255, 255, 255), (get_half_screen()[0], 100), centered=True)
+        draw_text(surf, "Select Car", self.title_font, (255, 255, 255), (half_W, 100), centered=True)
 
         if self.cars:
             draw_text(surf, self.cars[self.selected_car]["name"], self.font, (255, 255, 255), (get_half_screen()[0], 190), centered=True)
