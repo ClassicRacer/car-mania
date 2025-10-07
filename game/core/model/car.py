@@ -62,6 +62,7 @@ class CarMechanics:
 
     DRAG_OFFROAD_MAX = 2.8
     DRAG_OFFROAD_SPEED_BIAS = 0.35
+    DRAG_ONROAD = 0.15
     SPEED_EPS = 0.003
 
     def update(self, dt, stats, transform, inputs: DriveInput, *, sprite_height_px: int, on_road: bool = True, surface_grip: float = 1.0):
@@ -70,7 +71,7 @@ class CarMechanics:
         if not hasattr(self, "steer_state"):
             self.steer_state = 0.0
 
-
+        th = inputs.throttle
         self.speed += inputs.throttle * stats.acceleration * self.ACCEL * dt
         if inputs.brake:
             decel = stats.acceleration * self.ACCEL * self.BRAKE_POWER * dt
@@ -88,15 +89,17 @@ class CarMechanics:
             off = max(1.0, min(5.0, float(stats.offroad)))
             t = (off - 1.0) / 4.0
             c_drag = (1.0 - t) * self.DRAG_OFFROAD_MAX
-
             s_norm = 0.0 if top <= 1e-6 else min(1.0, abs(self.speed) / top)
             c_drag *= (self.DRAG_OFFROAD_SPEED_BIAS + (1.0 - self.DRAG_OFFROAD_SPEED_BIAS) * s_norm)
-
             if surface_grip > 0.0:
                 c_drag *= (1.0 / surface_grip)
-
             self.speed *= math.exp(-c_drag * dt)
-
+        elif th == 0.0 and not inputs.brake:
+            coast = stats.acceleration * self.ACCEL * self.DRAG_ONROAD * dt
+            if self.speed > 0.0:
+                self.speed = max(0.0, self.speed - coast)
+            elif self.speed < 0.0:
+                self.speed = min(0.0, self.speed + coast)
         if abs(self.speed) < self.SPEED_EPS:
             self.speed = 0.0
 
