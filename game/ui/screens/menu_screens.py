@@ -79,32 +79,36 @@ def level_creator_menu(game):
     ], back_action=lambda ctx: ctx["game"].set(create_menu(game)))
 
 def go_main_menu(ctx):
-    _debug_ctx(ctx)
+    ctx.pop("gameplay_screen", None)
     g = ctx["game"]
     g.set(main_menu(g))
 
 def go_create_menu(ctx):
-    _debug_ctx(ctx)
     g = ctx["game"]
     g.set(create_menu(g))
 
-def on_car_selected(ctx, car):
-    _debug_ctx(ctx)
+def go_level_select(ctx, car):
     g = ctx["game"]
-    g.set(LevelSelectScreen(back_action=go_car_select, continue_action=on_level_selected))
+    g.set(LevelSelectScreen(back_action=go_car_select, continue_action=go_gameplay))
 
 def go_car_select(ctx):
-    _debug_ctx(ctx)
     g = ctx["game"]
-    g.set(CarSelectScreen(back_action=go_main_menu, continue_action=on_car_selected))
+    g.set(CarSelectScreen(back_action=go_main_menu, continue_action=go_level_select))
 
-def on_level_selected(ctx):
-    _debug_ctx(ctx)
+def go_gameplay(ctx):
     g = ctx["game"]
-    g.set(Gameplay(back_action=go_main_menu, continue_action=go_main_menu))
+    if "gameplay_screen" not in ctx:
+        ctx["gameplay_screen"] = Gameplay(back_action=go_pause_menu, continue_action=go_main_menu)
+    g.set(ctx["gameplay_screen"])
 
-def _debug_ctx(ctx):
-    import inspect
-    print("*"*20)
-    outer_func = inspect.currentframe().f_back.f_code.co_name
-    print(f"{outer_func}:\n\n{ctx.keys()}")
+def go_pause_menu(ctx):
+    g = ctx["game"]
+    current_gameplay = g.current
+
+    def resume(_ctx):
+        _ctx["game"].set(current_gameplay)
+
+    g.set(PauseMenu([
+        ("Resume Game", resume),
+        ("Quit Game", go_main_menu),
+    ], back_action=resume))

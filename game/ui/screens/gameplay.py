@@ -44,17 +44,25 @@ class Gameplay(BaseScreen):
 
         if self.full_renderer is None:
             self.full_renderer = LevelFullRenderer(ctx["pieces"])
-
-        self.level_data = payload.get("level_data") or ctx.get("level_data") or self.level_data
-        self.camera = payload.get("camera") or self.camera or Camera()
         
-        self.players = list(payload.get("players") or ctx.get("players") or [])
-        self.actors = [CarActor(self.car_renderer, p.car) for p in self.players if getattr(p, "car", None)]
+        new_level = payload.get("level_data") or ctx.get("level_data") or self.level_data
+        level_changed = (self.level_data or {}).get("id") != (new_level or {}).get("id")
+        self.level_data = new_level
 
-        gate_order = self._compute_gate_order()
-        laps = int(self.level_data.get("laps", 1))
-        self.session = RaceSession(target_laps=laps, gate_order=gate_order)
-        self.collision = CollisionResolver()
+        if self.camera is None:
+            self.camera = payload.get("camera") or self.camera or Camera()
+        
+        if (not self.players) and (payload.get("players") or ctx.get("players")):
+            self.players = list(payload.get("players") or ctx.get("players") or [])
+            self.actors = [CarActor(self.car_renderer, p.car) for p in self.players if getattr(p, "car", None)]
+
+        if self.session is None or level_changed:
+            gate_order = self._compute_gate_order()
+            laps = int(self.level_data.get("laps", 1))
+            self.session = RaceSession(target_laps=laps, gate_order=gate_order)
+        
+        if self.collision is None:
+            self.collision = CollisionResolver()
 
         fonts = ctx.get("fonts", {})
         self.icon_hud = fonts.get("icon_hud")
@@ -78,7 +86,7 @@ class Gameplay(BaseScreen):
         actions = self.step(ctx)
         if self.continue_button.update(ctx, actions):
             self._continue(ctx)
-        if self.handle_back(ctx, actions):
+        if (self.session is None) or (self.session.winner_id is None) and self.handle_back(ctx, actions):
             return True
 
         self._process_actions(actions)
