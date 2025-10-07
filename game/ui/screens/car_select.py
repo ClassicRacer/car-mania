@@ -44,7 +44,7 @@ class CarSelectScreen(BaseScreen):
         player = Player(0, car_from_dict(selected, ctx))
         ctx["players"][:] = [player]
         if self.continue_action and selected:
-            self.continue_action(ctx, selected)
+            self.continue_action(ctx)
 
     def update(self, ctx, dt):
         actions = self.step(ctx)

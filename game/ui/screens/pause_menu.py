@@ -7,7 +7,7 @@ from game.ui.widgets.button import Button, layout_column
 
 class PauseMenu(BaseScreen):
 
-    def __init__(self, items, back_action=None, panel_size=(640, 420)):
+    def __init__(self, items, back_action=None, panel_size=(700, 500)):
         super().__init__(back_action)
         self.items = items
         self.buttons = []
@@ -44,7 +44,7 @@ class PauseMenu(BaseScreen):
         cx, cy = sw // 2, sh // 2
         self._panel_rect.size = self.panel_size
         self._panel_rect.center = (cx, cy)
-        top_y = self._panel_rect.y + 180
+        top_y = self._panel_rect.y + 240
         layout_column(self._panel_rect.centerx, top_y, (bw, bh), spacing, self.buttons)
 
     def update(self, ctx, dt):
