@@ -23,6 +23,7 @@ class Credits(BaseScreen):
             "Configurable Options",
             "Car / Level Creator",
             "Improved Assets",
+            "Adjustable Views"
         ]
 
     def enter(self, ctx):
