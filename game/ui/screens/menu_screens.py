@@ -101,7 +101,7 @@ def go_car_select(ctx):
 def on_level_selected(ctx):
     _debug_ctx(ctx)
     g = ctx["game"]
-    g.set(Gameplay(back_action=go_main_menu))
+    g.set(Gameplay(back_action=go_main_menu, continue_action=go_main_menu))
 
 def _debug_ctx(ctx):
     import inspect

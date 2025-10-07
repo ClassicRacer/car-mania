@@ -1,24 +1,28 @@
 import pygame
 
-from game.io.render import end_frame, get_logical_size
+from game.io.render import end_frame, get_half_screen, get_logical_size
 from game.core.model.car import DriveInput
 from game.render.car_view import CarActor, CarRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen
 from game.rules.race import RaceSession
 from game.ui.utils import draw_text, center_text_on_oval
+from game.ui.widgets.button import Button
 from game.world.collision import CollisionResolver
 
 class Gameplay(BaseScreen):
 
-    def __init__(self, back_action=None):
+    def __init__(self, back_action=None, continue_action=None):
         super().__init__(back_action)
+        self.continue_button = None
+        self.continue_action = continue_action
         self.full_renderer = None
         self.car_renderer = CarRenderer()
         self.camera = None
         self.level_data = None
         self.players = []
         self.actors = []
+        self.main_player_idx = 0
         self._input_state = {"up": False, "down": False, "left": False, "right": False, "brake": False}
         self.keep_car_upright = True
         self._upright_lerp = 0.35
@@ -26,9 +30,16 @@ class Gameplay(BaseScreen):
         self.collision = None
         self.icon_hud = None
         self.hud_font = None
+        self._frame_contacts = {}
+        self._speedometer_bg = None
+        self._speedometer_bg_key = None
 
     def enter(self, ctx):
         super().enter(ctx)
+        W, H = get_logical_size() 
+        self.continue_button = Button((0,H-120,300,64), "Continue", self.font, (255,255,255), (30,30,30), (50,50,50), callback=lambda c: self._continue(c), center_mode="horizontal")
+        self.continue_button.enter(ctx)
+
         payload = ctx.pop("gameplay", {}) or {}
 
         if self.full_renderer is None:
@@ -40,25 +51,38 @@ class Gameplay(BaseScreen):
         self.players = list(payload.get("players") or ctx.get("players") or [])
         self.actors = [CarActor(self.car_renderer, p.car) for p in self.players if getattr(p, "car", None)]
 
-        entry = self.full_renderer._get_world(self.level_data)
-        gate_order = [order for (order, _, _, _) in sorted(entry["gates"], key=lambda g: g[0])]
-        laps = self.level_data["laps"]
+        gate_order = self._compute_gate_order()
+        laps = int(self.level_data.get("laps", 1))
         self.session = RaceSession(target_laps=laps, gate_order=gate_order)
         self.collision = CollisionResolver()
-        self.icon_hud = ctx["fonts"]["icon_hud"]
-        self.icon_2_hud = ctx["fonts"]["icon_2_hud"]
-        self.hud_font = ctx["fonts"]["hud"]
+
+        fonts = ctx.get("fonts", {})
+        self.icon_hud = fonts.get("icon_hud")
+        self.icon_2_hud = fonts.get("icon_2_hud")
+        self.hud_font = fonts.get("hud")
+
+        self._ensure_speedometer_bg()
+
+    def _continue(self, ctx):
+        if self.continue_action:
+            self.continue_action(ctx)
 
     def on_resize(self, ctx, size):
         super().on_resize(ctx, size)
+        self._ensure_speedometer_bg()
+        W, H = get_logical_size()
+        if self.continue_button:
+            self.continue_button.set_rect((0, H - 120, 300, 64))
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
+        if self.continue_button.update(ctx, actions):
+            self._continue(ctx)
         if self.handle_back(ctx, actions):
             return True
 
         self._process_actions(actions)
-        self._update_car_motion(dt)
+        self._step_physics(dt)
         self._update_race(dt)
         self._focus_camera_on_main_player()
         return True
@@ -67,20 +91,24 @@ class Gameplay(BaseScreen):
         surf = ctx["window"]
 
         if self.full_renderer and self.level_data and self.camera:
+            active_gate = None
+            if self.session and self.players:
+                active_gate = self.session.active_gate_id(self.players[self.main_player_idx].race)
             self.full_renderer.render_to(
                 surf,self.level_data,
                 camera=self.camera,
                 actors=self.actors if self.actors else None,
-                active_gate_id=self.session.active_gate_id(self.players[0].race) if self.session else None,)
+                active_gate_id=active_gate)
         else:
             surf.fill((20, 20, 20))
         
-        self.render_ui(surf)
-            
+        self.render_ui(surf, ctx)
         end_frame()
 
-    def render_ui(self, surf):
-        player = self.players[0]
+    def render_ui(self, surf, ctx):
+        if not self.players:
+            return
+        player = self.players[self.main_player_idx]
         draw_text(surf, "↻", self.icon_hud, (255, 255, 255), (5, 10))
         draw_text(surf, f"{player.race.laps_completed + 1}" + (f" / {self.session.target_laps}" if player.race.laps_completed < self.session.target_laps else ""), self.hud_font, (255, 255, 255), (55, 5))
         draw_text(surf, "⏱", self.icon_2_hud, (255, 255, 255), (5, 60))
@@ -93,12 +121,10 @@ class Gameplay(BaseScreen):
         w, h = get_logical_size()
         oval_size = 265
         oval_pos = (w - 297, h - 280)
-        speedometer = pygame.Surface((oval_size, oval_size), pygame.SRCALPHA)
-        r = max(20, int(self.level_data["ground_r"] * 0.7))
-        g = max(20, int(self.level_data["ground_g"] * 0.7))
-        b = max(20, int(self.level_data["ground_b"] * 0.7))
-        pygame.draw.ellipse(speedometer, (r, g, b, 128), (0, 0, oval_size, oval_size))
-        surf.blit(speedometer, oval_pos)
+        self._ensure_speedometer_bg(oval_size)
+        if self._speedometer_bg:
+            surf.blit(self._speedometer_bg, oval_pos)
+
         speed = player.car.mechanics.speed * player.car.mechanics.MOVE
         top_speed = player.car.stats.top_speed * player.car.mechanics.MOVE
         reverse_speed = abs(player.car.stats.top_speed * player.car.mechanics.REVERSE_CAP * player.car.mechanics.MOVE)
@@ -106,7 +132,18 @@ class Gameplay(BaseScreen):
         center_text_on_oval(surf, converted_speed, self.hud_font, h - 190, oval_pos[0], oval_size, (255, 255, 255))
         center_text_on_oval(surf, "KPH", self.hud_font, h - 150, oval_pos[0], oval_size, (255, 255, 255))
         self._draw_speed_arc(surf, speed, [top_speed, reverse_speed], (255, 255, 255))
+        self._render_finish_banner(surf, ctx)
 
+    def _render_finish_banner(self, surf, ctx):
+        if not (self.session and self.session.winner_id is not None):
+            return
+        winner = self.players[self.main_player_idx].id == self.session.winner_id
+        winner_id = self.session.winner_id
+        half_W, half_H = get_half_screen()
+        draw_text(surf, "YOU WON!" if winner else "YOU LOST!", self.title_font, (255, 255, 255), (half_W, 100), centered=True)
+        mp = ctx["get_mouse_pos"]()
+        self.continue_button.draw(surf, mp)
+    
     def _draw_speed_arc(self, surface, speed, speed_thresholds, color):
         if speed == 0:
             return
@@ -123,6 +160,20 @@ class Gameplay(BaseScreen):
         start_angle = math.radians(270 - arc_angle)
         stop_angle = math.radians(270)
         pygame.draw.arc(surface, color, rect, start_angle, stop_angle, 8)
+
+    def _ensure_speedometer_bg(self, oval_size=265):
+        if not self.level_data:
+            return
+        r = max(20, int(self.level_data["ground_r"] * 0.7))
+        g = max(20, int(self.level_data["ground_g"] * 0.7))
+        b = max(20, int(self.level_data["ground_b"] * 0.7))
+        key = (r, g, b, oval_size)
+        if key == self._speedometer_bg_key and self._speedometer_bg is not None:
+            return
+        surf = pygame.Surface((oval_size, oval_size), pygame.SRCALPHA)
+        pygame.draw.ellipse(surf, (r, g, b, 128), (0, 0, oval_size, oval_size))
+        self._speedometer_bg = surf
+        self._speedometer_bg_key = key
         
     @staticmethod
     def _lerp_deg(a, b, t):
@@ -132,10 +183,10 @@ class Gameplay(BaseScreen):
     def _focus_camera_on_main_player(self):
         if not (self.camera and self.players):
             return
-        car = self.players[0].car
-        if not getattr(self.players[0], "car", None):
+        player = self.players[self.main_player_idx]
+        if not getattr(player, "car", None):
             return
-        pos = pygame.Vector2(car.transform.pos)
+        pos = pygame.Vector2(player.car.transform.pos)
 
         if self.full_renderer and self.level_data:
             bounds = self.full_renderer.get_piece_bounds(self.level_data)
@@ -150,7 +201,7 @@ class Gameplay(BaseScreen):
             self.camera.y = pos.y
 
         if self.keep_car_upright:
-            target = float(car.transform.angle_deg)
+            target = float(player.car.transform.angle_deg)
             self.camera.rot_deg = self._lerp_deg(float(self.camera.rot_deg), target, self._upright_lerp)
 
     def _process_actions(self, actions):
@@ -166,43 +217,65 @@ class Gameplay(BaseScreen):
             elif name == "space":
                 self._input_state["brake"] = phase == "press"
 
-    def _update_car_motion(self, dt: float):
-        c = self.players[0].car
-        controls = DriveInput(
-            up=self._input_state.get("up", False),
-            down=self._input_state.get("down", False),
-            left=self._input_state.get("left", False),
-            right=self._input_state.get("right", False),
-            brake=self._input_state.get("brake", False),
-        )
-        contacts = self.full_renderer.query_car_contacts(self.level_data, c)
-        is_on_road = bool(contacts.get("on_road"))
-        old_pos = c.transform.pos
-        c.mechanics.update(
-            dt,
-            stats=c.stats,
-            transform=c.transform,
-            inputs=controls,
-            sprite_height_px=c.appearance.image.get_height(),
-            on_road=is_on_road,
-            surface_grip=1.0,
-        )
-        new_pos = c.transform.pos
-        dx = new_pos[0] - old_pos[0]
-        dy = new_pos[1] - old_pos[1]
-        res = self.collision.resolve(c, old_pos, (dx, dy), dt, self.full_renderer, self.level_data)
-        c.transform.pos = res.pos
+    def _get_input_for_player(self, idx: int) -> DriveInput:
+        if idx == self.main_player_idx:
+            s = self._input_state
+            return DriveInput(
+                up=s.get("up", False),
+                down=s.get("down", False),
+                left=s.get("left", False),
+                right=s.get("right", False),
+                brake=s.get("brake", False),
+            )
+        return DriveInput()
+
+    def _step_physics(self, dt: float):
+        if not (self.players and self.full_renderer and self.level_data):
+            return
+        self._frame_contacts.clear()
+        for idx, p in enumerate(self.players):
+            car = p.car
+            if not car:
+                continue
+
+            controls = self._get_input_for_player(idx)
+
+            contacts_pre = self.full_renderer.query_car_contacts(self.level_data, car)
+            is_on_road = bool(contacts_pre.get("on_road"))
+
+            old_pos = car.transform.pos
+            car.mechanics.update(
+                dt,
+                stats=car.stats,
+                transform=car.transform,
+                inputs=controls,
+                sprite_height_px=car.appearance.image.get_height() if car.appearance else 0,
+                on_road=is_on_road,
+                surface_grip=1.0,
+            )
+
+            new_pos = car.transform.pos
+            dx = new_pos[0] - old_pos[0]
+            dy = new_pos[1] - old_pos[1]
+            res = self.collision.resolve(car, old_pos, (dx, dy), dt, self.full_renderer, self.level_data)
+            car.transform.pos = res.pos
+
+            contacts_post = self.full_renderer.query_car_contacts(self.level_data, car)
+            self._frame_contacts[p.id] = contacts_post
 
     def _update_race(self, dt: float):
         if not (self.session and self.players and self.level_data):
             return
-
         self.session.tick(dt)
-
         for p in self.players:
-            contacts = self.full_renderer.query_car_contacts(self.level_data, p.car)
+            contacts = self._frame_contacts.get(p.id) or self.full_renderer.query_car_contacts(self.level_data, p.car)
             gate_id = contacts.get("gate_id")
-            finished_now = self.session.step_player(p.id, p.race, gate_id)
+            self.session.step_player(p.id, p.race, gate_id)
 
-            if finished_now:
-                print(f"[race] FINISH! winner={self.session.winner_id} time={self.session.finish_time:.3f}s")
+    def _compute_gate_order(self):
+        get_public = getattr(self.full_renderer, "get_gate_order", None)
+        if callable(get_public):
+            return list(get_public(self.level_data))
+
+        entry = self.full_renderer._get_world(self.level_data)
+        return [order for (order, _, _, _) in sorted(entry.get("gates", ()), key=lambda g: g[0])]

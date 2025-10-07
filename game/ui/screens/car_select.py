@@ -1,5 +1,5 @@
 import pygame
-from game.io.assets import load_font, load_image
+from game.io.assets import load_image
 from game.io.render import get_logical_size, end_frame, get_half_screen
 from game.render.factory import car_from_dict
 from game.rules.race import Player

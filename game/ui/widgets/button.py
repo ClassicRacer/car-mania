@@ -2,7 +2,7 @@ import pygame
 from game.ui.utils import draw_text
 
 class Button:
-    def __init__(self, rect, text, font, fg, bg, hover, callback=None):
+    def __init__(self, rect, text, font, fg, bg, hover, callback=None, *, center_mode: str = "none"):
         self.rect = pygame.Rect(rect)
         self.text = text
         self.font = font
@@ -10,41 +10,64 @@ class Button:
         self.bg = bg
         self.hover = hover
         self.callback = callback
+        self.center_mode = center_mode
         self._surf = None
         self._pos = None
         self._down = False
         self._seq = 0
+        self._layout_rect = self.rect.copy()
 
     def set_rect(self, rect):
         self.rect = pygame.Rect(rect)
         self._pos = None
+        self._layout_rect = self.rect.copy()
+
+    def set_center_mode(self, mode: str):
+        self.center_mode = mode
 
     def enter(self, ctx):
         self._seq = ctx["screen_seq"]
         self._down = False
 
+    def _compute_layout_rect(self, surface) -> pygame.Rect:
+        r = self.rect.copy()
+        if self.center_mode != "none":
+            sw, sh = surface.get_size()
+            if self.center_mode == "vertical":
+                r.centery = sh // 2
+            elif self.center_mode == "horizontal":
+                r.centerx = sw // 2
+        return r
+
     def update(self, ctx, actions):
+        self._layout_rect = self._compute_layout_rect(ctx["window"])
+        hit_rect = self._layout_rect or self.rect
         for name, phase, payload in actions:
             if name == "mouse_down" and phase == "press" and payload == 1 and not self._down:
                 mp = ctx["get_mouse_pos"]()
-                if self.rect.collidepoint(mp):
+                if hit_rect.collidepoint(mp):
                     self._down = True
             if name == "mouse_up" and phase == "release" and payload == 1:
                 mp = ctx["get_mouse_pos"]()
-                if self._down and ctx["screen_seq"] == self._seq and self.rect.collidepoint(mp):
+                if self._down and ctx["screen_seq"] == self._seq and hit_rect.collidepoint(mp):
                     self._down = False
                     return True
                 self._down = False
         return False
 
     def draw(self, surface, mouse_pos):
-        m = self.rect.collidepoint(mouse_pos)
-        color = self.hover if m else self.bg
-        pygame.draw.rect(surface, color, self.rect, border_radius=8)
-        draw_text(surface, self.text, self.font, self.fg, self.rect.center, centered=True)
+        r = self._compute_layout_rect(surface)
+        self._layout_rect = r
+
+        hovering = r.collidepoint(mouse_pos)
+        color = self.hover if hovering else self.bg
+
+        pygame.draw.rect(surface, color, r, border_radius=8)
+        draw_text(surface, self.text, self.font, self.fg, r.center, centered=True)
     
     def clicked(self, mouse_pos, mouse_clicked):
-        return self.rect.collidepoint(mouse_pos) and mouse_clicked
+        hit_rect = self._layout_rect or self.rect
+        return hit_rect.collidepoint(mouse_pos) and mouse_clicked
     
 def layout_column(center_x, top_y, size, spacing, buttons):
     w, h = size
