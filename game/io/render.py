@@ -1,6 +1,8 @@
 import os
 import pygame
 
+from game.io.assets import ASSETS_DIR
+
 _window = None
 _screen = None
 _physical = (0, 0)
@@ -30,6 +32,8 @@ def init_display(physical_size=(1280, 720), logical_size=(1920, 1080), caption="
     _physical = physical_size
     _window = pygame.Surface(_logical)
     _screen = pygame.display.set_mode(_physical, pygame.RESIZABLE | pygame.DOUBLEBUF)
+    icon = pygame.image.load(os.path.join(ASSETS_DIR, "images", "icon.png")).convert_alpha()
+    pygame.display.set_icon(icon)
     _recalc()
     return _window
 
