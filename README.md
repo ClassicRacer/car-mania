@@ -86,7 +86,7 @@ python run.py
 - **Art & Assets:** Assets, cars, and level design derived from original release
 - **Technology:** Built with Python and pygame
 - **Fonts & Icons:** Bundled typefaces in `game/assets/fonts/`, with notices in `licenses/fonts/`
-- **Version:** v2.0.0-alpha.1
+- **Version:** v0.1.0-alpha.1
 - **Planned Features:** AI opponents, Sound effects, background music, configurable options, car/level creator, improved assets, adjustable views
 
 ## License

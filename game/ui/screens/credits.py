@@ -11,7 +11,7 @@ class Credits(BaseScreen):
         self.continue_action = continue_action
         self._light = (255, 255, 255)
         self._muted = (210, 210, 210)
-        self.version = "v2.0.0-alpha.1"
+        self.version = "v0.1.0-alpha.1"
         self._sections = [
             ("Programming & Game Design", "Harish Menon"),
             ("Art & Assets", "Assets, cars, and level design derived from original release"),
