@@ -4,12 +4,6 @@ import pygame
 from game.render.camera import Camera
 from game.render.level_utils import compute_piece_bounds, parse_level_code
 
-def _scaled(img: pygame.Surface, s: float) -> pygame.Surface:
-    if abs(s - 1.0) <= 1e-3:
-        return img
-    w, h = img.get_size()
-    return pygame.transform.smoothscale(img, (max(1, int(round(w*s))), max(1, int(round(h*s)))))
-
 class LevelFullRenderer:
     def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None):
         self.pieces = pieces
@@ -149,7 +143,6 @@ class LevelFullRenderer:
         wall_mask = entry.get("wall_mask")
         hit_wall = False
         if wall_mask:
-            # treat as "no walls" if the mask is empty
             has_bits = False
             if hasattr(wall_mask, "count"):
                 has_bits = wall_mask.count() > 0

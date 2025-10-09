@@ -13,11 +13,12 @@ class Credits(BaseScreen):
         self._muted = (210, 210, 210)
         self.version = "v2.0.0-alpha.1"
         self._sections = [
-            ("Programming & Game Design", "Harish Menon (ClassicRacer)"),
+            ("Programming & Game Design", "Harish Menon"),
             ("Art & Assets", "Assets, cars, and level design derived from original release"),
             ("Technology", "Built with Python and pygame"),
         ]
         self._planned = [
+            "AI Opponents",
             "Sound Effects",
             "Background Music",
             "Configurable Options",

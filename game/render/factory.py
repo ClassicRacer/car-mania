@@ -25,7 +25,6 @@ def car_from_dict(selected_car: dict, ctx: dict) -> Car:
         handling=float(selected_car["handling"]),
         offroad=float(selected_car["offroad"]),
         engine_type=int(selected_car["engine_type"])
-        #engine_type=EngineType(selected_car["engine_type"])
     )
     w, h = img.get_size()
     appearance = CarAppearance(image=img, pivot=(w * 0.5, h * 0.5), z_index=int(selected_car.get("z_index", 0)))

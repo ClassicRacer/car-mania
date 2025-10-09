@@ -2,20 +2,20 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
-COLL_SLIDE_KEEP   = 0.90   # keep this fraction of speed when sliding
-COLL_BOUNCE_KEEP  = 0.25   # keep this fraction of speed on a dead stop
-PERP_PROBE_PX     = 6.0    # how far we probe along tangents to find a slide
-DEPENETRATE_EPS   = 1.5    # tiny push out of solids to avoid sticking
+COLL_SLIDE_KEEP   = 0.90   # fraction of speed when sliding
+COLL_BOUNCE_KEEP  = 0.25   # fraction of speed on a dead stop
+PERP_PROBE_PX     = 6.0    # probe along tangents to find a slide
+DEPENETRATE_EPS   = 1.5    # push out of solids to avoid sticking
 ALIGN_RATE        = 0.12   # how quickly heading turns toward the sliding direction
 
 # extra anti-stuck
-RADIAL_PROBE_INNER = 6.0     # px
-RADIAL_PROBE_OUTER = 16.0    # px
+RADIAL_PROBE_INNER = 6.0
+RADIAL_PROBE_OUTER = 16.0
 RADIAL_PROBE_STEPS = 16      # directions to test around the car
 
-UNSTICK_TIME       = 0.45    # s of being blocked before we force a nudge
-UNSTICK_BACKSTEP   = 10.0    # px we step opposite the last motion
-UNSTICK_TURN       = 0.25    # rad we twist the nose on unstick
+UNSTICK_TIME       = 0.45    # s of being blocked before forcing a nudge
+UNSTICK_BACKSTEP   = 10.0    # step opposite the last motion
+UNSTICK_TURN       = 0.25    # rad we twist on unstick
 
 @dataclass
 class CollisionState:
