@@ -7,7 +7,7 @@ Car Mania started as a high-school project in 2020. This repository contains a c
 ## Features
 - **Car Select:** database-backed car stats, normalized comparison bars, rotatable previews.  
 - **Level Select:** database-backed levels, generated thumbnails, cinematic camera tour, transition to gameplay.  
-- **Racing Rules:** Gate-ordered laps, global race timer, finish banner.  
+- **Racing:** Gate-ordered laps, global race timer, finish banner.  
 - **Collision:** Sliding, bounce, and “unstick” nudges vs. walls/trees/gates.  
 - **Level Codes:** Compact strings that assemble roads, gates, and trees, with support for procedural maze generation.
 
@@ -21,7 +21,7 @@ Car Mania started as a high-school project in 2020. This repository contains a c
 
 #### macOS / Linux
 
-```console
+```bash
 git clone https://github.com/ClassicRacer/car-mania.git
 cd car-mania
 python -m venv .venv && source .venv/bin/activate
@@ -31,10 +31,22 @@ python -m pip install -r requirements.txt
 
 #### Windows
 
-```console
+##### PowerShell
+
+```powershell
 git clone https://github.com/ClassicRacer/car-mania.git
 cd car-mania
-python -m venv .venv && source .venv\\Scripts\\activate
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+##### Command Prompt
+
+```cmd
+git clone https://github.com/ClassicRacer/car-mania.git
+cd car-mania
+python -m venv .venv && .\.venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
