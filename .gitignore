@@ -21,11 +21,6 @@ dist/
 # Logs
 *.log
 
-# UserData
-UserData/*
-!UserData/Default/
-!UserData/Default/**
-
 # IDE/editor
 .vscode/
 .idea/
