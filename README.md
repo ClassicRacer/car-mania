@@ -78,5 +78,8 @@ python run.py
 - **Planned Features:** AI opponents, Sound effects, background music, configurable options, car/level creator, improved assets, adjustable views
 
 ## License
-- Bundled fonts (Orbitron, Nunito, DejaVu, Noto Sans Symbols 2) are provided under the SIL Open Font License. See files under `licenses/fonts/`.
-- No repository-wide source license is included; retain the existing structure and asset notices when redistributing.
+**No license is granted for the source code or original assets in this repository.**  
+Copyright © 2025–present Harish Menon. All rights reserved.
+
+Third-party fonts (Orbitron, Nunito, DejaVu, Noto Sans Symbols 2) are included under the SIL Open Font License.  
+See `licenses/fonts/` for full texts and notices.
