@@ -7,6 +7,7 @@ from game.core.model.car import Car
 class RaceState:
     laps_completed: int = 0
     gates_cleared: int = 0
+    score: int = 0
     next_gate_index: int = 0
 
 @dataclass
@@ -48,12 +49,14 @@ class RaceSession:
             return self.finished
 
         race.gates_cleared += 1
+        race.score += 10
         race.next_gate_index = (race.next_gate_index + 1) % max(1, len(self.gate_order))
 
         if race.gates_cleared >= len(self.gate_order):
             race.gates_cleared = 0
             race.next_gate_index = 0
             race.laps_completed += 1
+            race.score += 90
         if race.laps_completed >= self.target_laps and not self.finished:
             self.finished = True
             self.winner_id = player_id

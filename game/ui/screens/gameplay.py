@@ -6,7 +6,7 @@ from game.render.car_view import CarActor, CarRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen
 from game.rules.race import RaceSession
-from game.ui.utils import draw_text, center_text_on_oval
+from game.ui.utils import draw_text, center_text_on_oval, draw_right
 from game.ui.widgets.button import Button
 from game.world.collision import CollisionResolver
 
@@ -120,6 +120,7 @@ class Gameplay(BaseScreen):
         draw_text(surf, "↻", self.icon_hud, (255, 255, 255), (5, 10))
         draw_text(surf, f"{player.race.laps_completed + 1}" + (f" / {self.session.target_laps}" if player.race.laps_completed < self.session.target_laps else ""), self.hud_font, (255, 255, 255), (55, 5))
         draw_text(surf, "⏱", self.icon_2_hud, (255, 255, 255), (5, 60))
+        draw_right(surf, 10, str(player.race.score), self.hud_font, (255, 255, 255))
         import math
         frac, whole = math.modf(self.session.elapsed_time)
         minutes = int(whole // 60)
