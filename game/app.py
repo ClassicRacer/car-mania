@@ -5,7 +5,7 @@ from game.core.engine.state import Game
 from game.ui.screens.menu_screens import main_menu
 from game.ui.widgets.button import make_back_draw
 from game.io.assets import load_font, load_image
-from game.io.input import poll_actions
+from game.io import input as xin
 from game.data.store import open_db
 
 import os, pygame
@@ -53,6 +53,7 @@ def main():
     pygame.init()
     db = open_db(DB_FILE)
     window = init_display()
+    xin.init_input_system()
     ui_font = load_font(FONT_FILE, 36)
     title_font = load_font(FONT_FILE, 100)
     subtitle_font = load_font(FONT_FILE, 20)
@@ -65,7 +66,7 @@ def main():
         "window": window,
         "fonts": {"ui": ui_font, "title": title_font, "subtitle": subtitle_font, "icon": icon_font, "icon_hud": icon_hud, "icon_2_hud": icon_2_hud, "hud": hud_font},
         "back_button_draw": make_back_draw(icon_font, ui_font),
-        "poll_actions": poll_actions,
+        "poll_actions": xin.poll_actions,
         "get_mouse_pos": get_mouse_pos_logical,
         "db": db,
         "profile_id": 1,

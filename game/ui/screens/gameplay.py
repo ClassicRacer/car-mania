@@ -9,8 +9,11 @@ from game.rules.race import RaceSession
 from game.ui.utils import draw_text, center_text_on_oval, draw_right
 from game.ui.widgets.button import Button
 from game.world.collision import CollisionResolver
+from game.io.input import is_action_down
 
 class Gameplay(BaseScreen):
+    LAYER_NAME = "gameplay"
+    BINDINGS = {"view": [("keydown", pygame.K_v)],}
 
     def __init__(self, back_action=None, continue_action=None):
         super().__init__(back_action)
@@ -23,7 +26,6 @@ class Gameplay(BaseScreen):
         self.players = []
         self.actors = []
         self.main_player_idx = 0
-        self._input_state = {"up": False, "down": False, "left": False, "right": False, "brake": False}
         self.keep_car_upright = True
         self._upright_lerp = 0.35
         self.session = None
@@ -84,12 +86,16 @@ class Gameplay(BaseScreen):
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
+        if actions is None:
+            return False
+        for name, phase, payload in actions:
+            if name == "view" and phase == "press":
+                self.keep_car_upright = not self.keep_car_upright
         if self.continue_button.update(ctx, actions):
             self._continue(ctx)
         if (self.session is None) or (self.session.winner_id is None) and self.handle_back(ctx, actions):
             return True
 
-        self._process_actions(actions)
         self._step_physics(dt)
         self._update_race(dt)
         self._focus_camera_on_main_player()
@@ -213,28 +219,14 @@ class Gameplay(BaseScreen):
             target = float(player.car.transform.angle_deg)
             self.camera.rot_deg = self._lerp_deg(float(self.camera.rot_deg), target, self._upright_lerp)
 
-    def _process_actions(self, actions):
-        for name, phase, _ in actions:
-            if name == "up":
-                self._input_state["up"] = phase == "press"
-            elif name == "down":
-                self._input_state["down"] = phase == "press"
-            elif name == "left":
-                self._input_state["left"] = phase == "press"
-            elif name == "right":
-                self._input_state["right"] = phase == "press"
-            elif name == "space":
-                self._input_state["brake"] = phase == "press"
-
     def _get_input_for_player(self, idx: int) -> DriveInput:
         if idx == self.main_player_idx:
-            s = self._input_state
             return DriveInput(
-                up=s.get("up", False),
-                down=s.get("down", False),
-                left=s.get("left", False),
-                right=s.get("right", False),
-                brake=s.get("brake", False),
+                up=is_action_down("up"),
+                down=is_action_down("down"),
+                left=is_action_down("left"),
+                right=is_action_down("right"),
+                brake=is_action_down("space"),
             )
         return DriveInput()
 

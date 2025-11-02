@@ -5,6 +5,8 @@ from game.ui.widgets.button import Button
 
 
 class Credits(BaseScreen):
+    LAYER_NAME = "credits"
+
     def __init__(self, back_action=None, continue_action=None):
         super().__init__(back_action)
         self.continue_button = None

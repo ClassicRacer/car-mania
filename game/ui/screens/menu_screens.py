@@ -9,6 +9,8 @@ from game.ui.screens.base_screen import BaseScreen
 from game.ui.screens.car_select import CarSelectScreen
 
 class MenuScreen(BaseScreen):
+    LAYER_NAME = "menu_screen"
+
     def __init__(self, title, items, back_action=None):
         super().__init__(back_action)
         self.title = title

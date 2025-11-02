@@ -6,6 +6,7 @@ from game.ui.widgets.button import Button, layout_column
 
 
 class PauseMenu(BaseScreen):
+    LAYER_NAME = "pause_menu"
 
     def __init__(self, items, back_action=None, panel_size=(700, 500)):
         super().__init__(back_action)

@@ -11,6 +11,8 @@ from game.ui.widgets.button import Button
 from game.data.queries import fetch_levels
 
 class LevelSelectScreen(BaseScreen):
+    LAYER_NAME = "level_select"
+
     def __init__(self, back_action=None, continue_action=None, thumb_size=(150, 150), margin=24):
         super().__init__(back_action)
         self.selected_level = 0

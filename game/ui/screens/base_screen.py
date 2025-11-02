@@ -1,9 +1,19 @@
-import pygame
+from typing import ClassVar
 from game.core.engine.state import Screen
 from game.io.render import resize_physical
 from game.ui.widgets.button import BackControl, poll_actions_cached
+from game.io.input import push_bindings, pop_bindings
 
 class BaseScreen(Screen):
+    LAYER_NAME = ClassVar[str]
+
+    def __init_subclass__(cls, **kw):
+        super().__init_subclass__(**kw)
+        if 'LAYER_NAME' not in cls.__dict__:
+            raise TypeError(f"{cls.__name__} must define LAYER_NAME")
+        if not isinstance(cls.LAYER_NAME, str) or not cls.LAYER_NAME:
+            raise TypeError(f"{cls.__name__}.LAYER_NAME must be a non-empty str")
+
     def __init__(self, back_action=None):
         self.back_action = back_action
         self.back = BackControl() if back_action else None
@@ -17,8 +27,14 @@ class BaseScreen(Screen):
         self.font = ctx["fonts"]["ui"]
         self.title_font = ctx["fonts"]["title"]
         self.subtitle_font = ctx["fonts"]["subtitle"]
+        bindings = getattr(self, "BINDINGS", None)
+        if bindings:
+            push_bindings(self.LAYER_NAME, bindings)
         if self.back:
             self.back.enter(ctx)
+
+    def exit(self, ctx):
+        pop_bindings(self.LAYER_NAME)
 
     def poll(self, ctx):
         return self.back.poll(ctx) if self.back else poll_actions_cached(ctx)
