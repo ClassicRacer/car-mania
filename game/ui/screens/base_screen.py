@@ -10,6 +10,7 @@ class BaseScreen(Screen):
         self.seq = 0
         self.font = None
         self.title_font = None
+        self.block_back = False
 
     def enter(self, ctx):
         self.seq = ctx["screen_seq"]
@@ -28,7 +29,7 @@ class BaseScreen(Screen):
             ctx["back_button_draw"](surf, mp, self.back.rect)
 
     def handle_back(self, ctx, actions):
-        if self.back and self.back.update(ctx, actions):
+        if not self.block_back and self.back and self.back.update(ctx, actions):
             self.back_action(ctx)
             return True
         return False
