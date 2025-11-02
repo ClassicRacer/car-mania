@@ -15,7 +15,9 @@ class Gameplay(BaseScreen):
     LAYER_NAME = "gameplay"
     BINDINGS = {"view": [("keydown", pygame.K_v)],
                 "zoom_in": [("keydown", pygame.K_EQUALS), ("keydown", pygame.K_KP_PLUS)],
-                "zoom_out": [("keydown", pygame.K_MINUS), ("keydown", pygame.K_KP_MINUS)]
+                "zoom_out": [("keydown", pygame.K_MINUS), ("keydown", pygame.K_KP_MINUS)],
+                "rotate_camera_left": [("keydown", pygame.K_x)],
+                "rotate_camera_right": [("keydown", pygame.K_z)],
                 }
 
     def __init__(self, back_action=None, continue_action=None):
@@ -31,6 +33,7 @@ class Gameplay(BaseScreen):
         self.main_player_idx = 0
         self.keep_car_upright = True
         self._upright_lerp = 0.35
+        self.cam_angle_offset = 0.0
         self.session = None
         self.collision = None
         self.icon_hud = None
@@ -99,7 +102,8 @@ class Gameplay(BaseScreen):
         if (self.session is None) or (self.session.winner_id is None) and self.handle_back(ctx, actions):
             return True
 
-        self._apply_camera_zoom(dt)  
+        self._apply_camera_zoom(dt)
+        self._apply_camera_rotation(dt)
         self._step_physics(dt)
         self._update_race(dt)
         self._focus_camera_on_main_player()
@@ -220,7 +224,8 @@ class Gameplay(BaseScreen):
             self.camera.y = pos.y
 
         if self.keep_car_upright:
-            target = float(player.car.transform.angle_deg)
+            base = float(player.car.transform.angle_deg)
+            target = (base + self.cam_angle_offset) % 360.0
             self.camera.rot_deg = self._lerp_deg(float(self.camera.rot_deg), target, self._upright_lerp)
 
     def _get_input_for_player(self, idx: int) -> DriveInput:
@@ -249,6 +254,34 @@ class Gameplay(BaseScreen):
         elif zoom_out_down:
             z /= (1.0 + ZOOM_RATE * dt)
         self.camera.zoom = max(MIN_ZOOM, min(MAX_ZOOM, z))
+
+    def _wrap_deg(self, a: float) -> float:
+        return ((a + 180.0) % 360.0) - 180.0
+
+    def _apply_camera_rotation(self, dt: float):
+        ROTATE_RATE = 120.0
+
+        left = is_action_down("rotate_camera_left")
+        right = is_action_down("rotate_camera_right")
+
+        if left and right:
+            if self.keep_car_upright:
+                self.cam_angle_offset = 0.0
+            else:
+                self.camera.rot_deg = 0.0
+            return
+
+        if self.keep_car_upright:
+            if left:
+                self.cam_angle_offset = self._wrap_deg(self.cam_angle_offset - ROTATE_RATE * dt)
+            elif right:
+                self.cam_angle_offset = self._wrap_deg(self.cam_angle_offset + ROTATE_RATE * dt)
+        else:
+            if left:
+                self.camera.rot_deg -= ROTATE_RATE * dt
+            elif right:
+                self.camera.rot_deg += ROTATE_RATE * dt
+            self.camera.rot_deg %= 360.0
 
     def _step_physics(self, dt: float):
         if not (self.players and self.full_renderer and self.level_data):
