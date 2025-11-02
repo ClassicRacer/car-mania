@@ -71,9 +71,9 @@ class LevelSelectScreen(BaseScreen):
             if not self.hide_ui:
                 self.hide_ui = True
                 self.block_back = True
-                self.camera_tour.begin_gameplay(target_pos, 1.5, on_complete=_finish_transition)
+                self.camera_tour.begin_gameplay(target_pos, on_complete=_finish_transition)
             else:
-                self.camera_tour.skip_to_gameplay(target_pos, 1.5, on_complete=_finish_transition)
+                self.camera_tour.skip_to_gameplay(target_pos, on_complete=_finish_transition)
 
     def update(self, ctx, dt):
         actions = self.step(ctx)

@@ -13,7 +13,10 @@ from game.io.input import is_action_down
 
 class Gameplay(BaseScreen):
     LAYER_NAME = "gameplay"
-    BINDINGS = {"view": [("keydown", pygame.K_v)],}
+    BINDINGS = {"view": [("keydown", pygame.K_v)],
+                "zoom_in": [("keydown", pygame.K_EQUALS), ("keydown", pygame.K_KP_PLUS)],
+                "zoom_out": [("keydown", pygame.K_MINUS), ("keydown", pygame.K_KP_MINUS)]
+                }
 
     def __init__(self, back_action=None, continue_action=None):
         super().__init__(back_action)
@@ -96,6 +99,7 @@ class Gameplay(BaseScreen):
         if (self.session is None) or (self.session.winner_id is None) and self.handle_back(ctx, actions):
             return True
 
+        self._apply_camera_zoom(dt)  
         self._step_physics(dt)
         self._update_race(dt)
         self._focus_camera_on_main_player()
@@ -229,6 +233,22 @@ class Gameplay(BaseScreen):
                 brake=is_action_down("space"),
             )
         return DriveInput()
+
+    def _apply_camera_zoom(self, dt: float):
+        MIN_ZOOM, MAX_ZOOM= 0.05, 5.0
+        ZOOM_RATE = 1.5
+
+        zoom_in_down  = is_action_down("zoom_in")
+        zoom_out_down = is_action_down("zoom_out")
+        if zoom_in_down and zoom_out_down:
+            self.camera.zoom = Camera.DEFAULT_ZOOM
+            return
+        z = self.camera.zoom
+        if zoom_in_down:
+            z *= (1.0 + ZOOM_RATE * dt)
+        elif zoom_out_down:
+            z /= (1.0 + ZOOM_RATE * dt)
+        self.camera.zoom = max(MIN_ZOOM, min(MAX_ZOOM, z))
 
     def _step_physics(self, dt: float):
         if not (self.players and self.full_renderer and self.level_data):
