@@ -33,7 +33,7 @@ class LevelSelectScreen(BaseScreen):
     def enter(self, ctx):
         super().enter(ctx)
         self.levels = fetch_levels(ctx["db"], ctx["profile_id"])
-        renderer = LevelPreviewRenderer(ctx["pieces"], target_size=(360, 220))
+        renderer = LevelPreviewRenderer(ctx["pieces"])
         self.full_renderer = LevelFullRenderer(ctx["pieces"])
         self.thumbs = [renderer.render(row) for row in self.levels]
         self.continue_button = Button((1500,513,300,64), "Continue", self.font, (255,255,255), (30,30,30), (50,50,50), callback=lambda c: self._continue(c))
