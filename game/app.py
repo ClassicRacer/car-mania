@@ -78,7 +78,7 @@ def main():
     game = Game(ctx)
     ctx["game"] = game
     game.set(main_menu(game))
-    run(game.update, game.render, fps=60)
+    run(game.update, game.render, fps=120)
 
 if __name__ == "__main__":
     main()
