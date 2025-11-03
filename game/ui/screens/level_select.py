@@ -116,7 +116,7 @@ class LevelSelectScreen(BaseScreen):
 
         if not self.hide_ui:
             draw_text(surf, "Select Level", self.title_font, (255, 255, 255), (half_W, 100), centered=True)
-
+            draw_text(surf, f"{self.camera.zoom}", self.font, (255, 255, 255), (200, 10))
             N = max(1, len(self.levels))
             pad = self.margin
             slot_w = (W - pad*2) // N
