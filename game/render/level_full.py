@@ -5,10 +5,11 @@ from game.render.camera import Camera
 from game.render.level_utils import compute_piece_bounds, parse_level_code
 
 class LevelFullRenderer:
-    def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None):
+    def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None, tri_min_zoom=0.25):
         self.pieces = pieces
         self.margin = margin_px
         self.hud_h = hud_h
+        self.tri_min_zoom = float(tri_min_zoom)
 
         if origin_offset is None:
             road = self.pieces.get("road_1")
@@ -224,7 +225,7 @@ class LevelFullRenderer:
         seed: int | None,
         *,
         tile=256,                    
-        density=0.00005,
+        density=0.0001,
         min_size=18, max_size=90,
         alpha=255,
         preblend_bg: tuple[int, int, int] | None = None
@@ -288,7 +289,7 @@ class LevelFullRenderer:
         zoom = max(1e-6, camera.zoom)
         angle = camera.rot_deg % 360.0
         angle_eps = 1e-3
-
+        do_triangles = zoom >= self.tri_min_zoom
         full_scale_needed = zoom <= 1.0 or not (angle <= angle_eps or angle >= 360.0 - angle_eps)
 
         def scale_world(target_size):
@@ -364,25 +365,25 @@ class LevelFullRenderer:
                     int(round(pivot[0] - cam_x * zoom)),
                     int(round(pivot[1] - cam_y * zoom)),
                 )
-
-                view_w = tw / zoom
-                view_h = th / zoom
-                view_rect = pygame.Rect(
-                    int(math.floor(cam_x - view_w * 0.5)),
-                    int(math.floor(cam_y - view_h * 0.5)),
-                    int(math.ceil(view_w)),
-                    int(math.ceil(view_h)),
-                )
-
-                def to_scr(wx, wy):
-                    return (
-                        int(round(pivot[0] + (wx - cam_x) * zoom)),
-                        int(round(pivot[1] + (wy - cam_y) * zoom)),
+                if do_triangles:
+                    view_w = tw / zoom
+                    view_h = th / zoom
+                    view_rect = pygame.Rect(
+                        int(math.floor(cam_x - view_w * 0.5)),
+                        int(math.floor(cam_y - view_h * 0.5)),
+                        int(math.ceil(view_w)),
+                        int(math.ceil(view_h)),
                     )
 
-                self._draw_bg_triangles_in_view(
-                    target_surface, view_rect, to_scr, bg, entry.get("seed"), preblend_bg=bg
-                )
+                    def to_scr(wx, wy):
+                        return (
+                            int(round(pivot[0] + (wx - cam_x) * zoom)),
+                            int(round(pivot[1] + (wy - cam_y) * zoom)),
+                        )
+
+                    self._draw_bg_triangles_in_view(
+                        target_surface, view_rect, to_scr, bg, entry.get("seed"), preblend_bg=bg
+                    )
 
                 target_surface.blit(scaled, top_left)
 
@@ -421,10 +422,10 @@ class LevelFullRenderer:
                         int(round(pivot[0] + (wx - cam_x) * zoom)),
                         int(round(pivot[1] + (wy - cam_y) * zoom)),
                     )
-
-                self._draw_bg_triangles_in_view(
-                    target_surface, tri_view_rect, to_scr, bg, entry.get("seed"), preblend_bg=bg
-                    )
+                if do_triangles:
+                    self._draw_bg_triangles_in_view(
+                        target_surface, tri_view_rect, to_scr, bg, entry.get("seed"), preblend_bg=bg
+                        )
 
                 view = world.subsurface(view_rect)
                 scaled_size = (
@@ -466,25 +467,25 @@ class LevelFullRenderer:
             int(round(cxc - cam_x * zoom)),
             int(round(cyc - cam_y * zoom)),
         )
-
-        view_w = diag / zoom
-        view_h = diag / zoom
-        view_rect = pygame.Rect(
-            int(math.floor(cam_x - view_w * 0.5)),
-            int(math.floor(cam_y - view_h * 0.5)),
-            int(math.ceil(view_w)),
-            int(math.ceil(view_h)),
-        )
-
-        def to_canvas(wx, wy):
-            return (
-                int(round(top_left[0] + wx * zoom)),
-                int(round(top_left[1] + wy * zoom)),
+        if do_triangles:
+            view_w = diag / zoom
+            view_h = diag / zoom
+            view_rect = pygame.Rect(
+                int(math.floor(cam_x - view_w * 0.5)),
+                int(math.floor(cam_y - view_h * 0.5)),
+                int(math.ceil(view_w)),
+                int(math.ceil(view_h)),
             )
 
-        self._draw_bg_triangles_in_view(
-            canvas, view_rect, to_canvas, bg, entry.get("seed"), preblend_bg=bg
-        )
+            def to_canvas(wx, wy):
+                return (
+                    int(round(top_left[0] + wx * zoom)),
+                    int(round(top_left[1] + wy * zoom)),
+                )
+
+            self._draw_bg_triangles_in_view(
+                canvas, view_rect, to_canvas, bg, entry.get("seed"), preblend_bg=bg
+            )
 
         if full_scale_needed:
             target_scaled_size = (max(1, int(round(ww * zoom))), max(1, int(round(wh * zoom))))
