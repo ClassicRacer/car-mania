@@ -102,6 +102,7 @@ class LevelFullRenderer:
             "seed": actual_seed,
             "scaled_surface": None,
             "scaled_size": None,
+            "textured": bool(level_row.get("textured", 0)),
 
             "road_mask": pygame.mask.from_surface(road_surf),
             "gate_mask": pygame.mask.from_surface(gate_surf),
@@ -289,7 +290,7 @@ class LevelFullRenderer:
         zoom = max(1e-6, camera.zoom)
         angle = camera.rot_deg % 360.0
         angle_eps = 1e-3
-        do_triangles = zoom >= self.tri_min_zoom
+        do_triangles = entry["textured"] and zoom >= self.tri_min_zoom
         full_scale_needed = zoom <= 1.0 or not (angle <= angle_eps or angle >= 360.0 - angle_eps)
 
         def scale_world(target_size):
