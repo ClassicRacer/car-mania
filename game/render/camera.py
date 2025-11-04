@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 
 class Camera:
+    DEFAULT_ZOOM = 1.5
+
     def __init__(self, x=0.0, y=0.0, zoom=1.0, rot_deg=0.0):
         self.x = float(x)
         self.y = float(y)
@@ -290,7 +292,7 @@ class CameraTour:
             return 1.0
         return min(avail_w / ww, avail_h / wh)
 
-    def begin_gameplay(self, car_pos, target_zoom=None, *, relative=False, on_complete=None):
+    def begin_gameplay(self, car_pos, target_zoom=Camera.DEFAULT_ZOOM, *, relative=False, on_complete=None):
         if car_pos is None:
             car_vec = pygame.Vector2(self.camera.x, self.camera.y)
         else:
@@ -319,10 +321,7 @@ class CameraTour:
         self._gameplay_start_pos = pygame.Vector2(self.camera.x, self.camera.y)
         self._gameplay_target_pos = car_vec
         self._gameplay_start_zoom = float(self.camera.zoom)
-        if target_zoom is None:
-            self._gameplay_target_zoom = self._gameplay_start_zoom
-        else:
-            self._gameplay_target_zoom = self._clamp_zoom(float(target_zoom))
+        self._gameplay_target_zoom = self._clamp_zoom(target_zoom)
 
         dist = self._gameplay_start_pos.distance_to(self._gameplay_target_pos)
         move_duration = dist / self.PAN_SPEED if self.PAN_SPEED > 1e-6 else 0.0
@@ -345,7 +344,7 @@ class CameraTour:
                 return True
         return False
     
-    def skip_to_gameplay(self, car_pos, target_zoom=None, on_complete=None):
+    def skip_to_gameplay(self, car_pos, target_zoom=Camera.DEFAULT_ZOOM, on_complete=None):
         if car_pos is None:
             car_vec = pygame.Vector2(self.camera.x, self.camera.y)
         else:
@@ -357,7 +356,7 @@ class CameraTour:
 
         self.camera.x = car_vec.x
         self.camera.y = car_vec.y
-        self.camera.zoom = self._clamp_zoom(self.camera.zoom if target_zoom is None else float(target_zoom))
+        self.camera.zoom = self._clamp_zoom(target_zoom)
         self.camera.rot_deg = 0.0
 
         self.state = "idle"

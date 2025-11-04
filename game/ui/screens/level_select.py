@@ -11,6 +11,8 @@ from game.ui.widgets.button import Button
 from game.data.queries import fetch_levels
 
 class LevelSelectScreen(BaseScreen):
+    LAYER_NAME = "level_select"
+
     def __init__(self, back_action=None, continue_action=None, thumb_size=(150, 150), margin=24):
         super().__init__(back_action)
         self.selected_level = 0
@@ -31,7 +33,7 @@ class LevelSelectScreen(BaseScreen):
     def enter(self, ctx):
         super().enter(ctx)
         self.levels = fetch_levels(ctx["db"], ctx["profile_id"])
-        renderer = LevelPreviewRenderer(ctx["pieces"], target_size=(360, 220))
+        renderer = LevelPreviewRenderer(ctx["pieces"])
         self.full_renderer = LevelFullRenderer(ctx["pieces"])
         self.thumbs = [renderer.render(row) for row in self.levels]
         self.continue_button = Button((1500,513,300,64), "Continue", self.font, (255,255,255), (30,30,30), (50,50,50), callback=lambda c: self._continue(c))
@@ -63,15 +65,15 @@ class LevelSelectScreen(BaseScreen):
                 }
                 if self.continue_action:
                     self.continue_action(ctx)
-
             target_pos = None
             if self.players and getattr(self.players[0], "car", None):
                 target_pos = self.players[0].car.transform.pos                  
             if not self.hide_ui:
                 self.hide_ui = True
-                self.camera_tour.begin_gameplay(target_pos, 1.5, on_complete=_finish_transition)
+                self.block_back = True
+                self.camera_tour.begin_gameplay(target_pos, on_complete=_finish_transition)
             else:
-                self.camera_tour.skip_to_gameplay(target_pos, 1.5, on_complete=_finish_transition)
+                self.camera_tour.skip_to_gameplay(target_pos, on_complete=_finish_transition)
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
@@ -114,7 +116,6 @@ class LevelSelectScreen(BaseScreen):
 
         if not self.hide_ui:
             draw_text(surf, "Select Level", self.title_font, (255, 255, 255), (half_W, 100), centered=True)
-
             N = max(1, len(self.levels))
             pad = self.margin
             slot_w = (W - pad*2) // N

@@ -5,13 +5,15 @@ from game.ui.widgets.button import Button
 
 
 class Credits(BaseScreen):
+    LAYER_NAME = "credits"
+
     def __init__(self, back_action=None, continue_action=None):
         super().__init__(back_action)
         self.continue_button = None
         self.continue_action = continue_action
         self._light = (255, 255, 255)
         self._muted = (210, 210, 210)
-        self.version = "v0.1.0-alpha.1"
+        self.version = "v0.1.0-alpha.2"
         self._sections = [
             ("Programming & Game Design", "Harish Menon"),
             ("Art & Assets", "Assets, cars, and level design derived from original release"),
@@ -24,7 +26,6 @@ class Credits(BaseScreen):
             "Configurable Options",
             "Car / Level Creator",
             "Improved Assets",
-            "Adjustable Views"
         ]
 
     def enter(self, ctx):

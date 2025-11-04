@@ -41,7 +41,7 @@ def get_max_stats(conn, profile_id):
 
 def fetch_levels(conn: sqlite3.Connection, profile_id: int):
     cur = conn.execute(
-        """SELECT id,name,code,ground_r,ground_g,ground_b,laps,music_path,display_order
+        """SELECT id,name,code,ground_r,ground_g,ground_b,textured,laps,music_path,display_order
            FROM levels
            WHERE profile_id=?
            ORDER BY display_order,id""",

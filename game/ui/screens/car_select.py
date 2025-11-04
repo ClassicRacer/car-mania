@@ -9,6 +9,8 @@ from game.ui.widgets.button import Button
 from game.data.queries import fetch_cars, get_max_stats
 
 class CarSelectScreen(BaseScreen):
+    LAYER_NAME = "car_select"
+
     def __init__(self, back_action=None, continue_action=None, tile_size=(150,150), margin=24):
         super().__init__(back_action)
         self.selected_car = 0

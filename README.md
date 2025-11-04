@@ -15,7 +15,7 @@ Car Mania started as a high-school project in 2020. This repository contains a c
 
 ### Requirements
 - Python **3.10+**
-- Pygame **2.5+**
+- pygame-ce **2.5+**
 
 ### Quick Start
 
@@ -62,8 +62,13 @@ python run.py
 - **W / Up Arrow** – Accelerate  
 - **S / Down Arrow** – Reverse  
 - **A / Left Arrow** – Steer left  
-- **D / Right Arrow** – Steer right  
+- **D / Right Arrow** – Steer right
 - **Space** – Brake  
+
+- **Z / X** – Rotate camera left/right  
+- **+ / -** – Zoom in/out camera
+- **V** – Toggle camera rotation when focused on car
+
 - **Escape** – Pause / Back
 
 ## Menu Flow
@@ -84,10 +89,10 @@ python run.py
 ## Credits
 - **Programming & Game Design:** Harish Menon
 - **Art & Assets:** Assets, cars, and level design derived from original release
-- **Technology:** Built with Python and pygame
+- **Technology:** Built with Python and pygame-ce
 - **Fonts & Icons:** Bundled typefaces in `game/assets/fonts/`, with notices in `licenses/fonts/`
-- **Version:** v0.1.0-alpha.1
-- **Planned Features:** AI opponents, Sound effects, background music, configurable options, car/level creator, improved assets, adjustable views
+- **Version:** v0.1.0-alpha.2
+- **Planned Features:** AI opponents, Sound effects, background music, configurable options, car/level creator, improved assets
 
 ## License
 **No license is granted for the source code or original assets in this repository.**  

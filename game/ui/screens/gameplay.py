@@ -6,11 +6,19 @@ from game.render.car_view import CarActor, CarRenderer
 from game.render.level_full import Camera, LevelFullRenderer
 from game.ui.screens.base_screen import BaseScreen
 from game.rules.race import RaceSession
-from game.ui.utils import draw_text, center_text_on_oval
+from game.ui.utils import draw_text, center_text_on_oval, draw_right
 from game.ui.widgets.button import Button
 from game.world.collision import CollisionResolver
+from game.io.input import is_action_down
 
 class Gameplay(BaseScreen):
+    LAYER_NAME = "gameplay"
+    BINDINGS = {"view": [("keydown", pygame.K_v)],
+                "zoom_in": [("keydown", pygame.K_EQUALS), ("keydown", pygame.K_KP_PLUS)],
+                "zoom_out": [("keydown", pygame.K_MINUS), ("keydown", pygame.K_KP_MINUS)],
+                "rotate_camera_left": [("keydown", pygame.K_x)],
+                "rotate_camera_right": [("keydown", pygame.K_z)],
+                }
 
     def __init__(self, back_action=None, continue_action=None):
         super().__init__(back_action)
@@ -23,9 +31,9 @@ class Gameplay(BaseScreen):
         self.players = []
         self.actors = []
         self.main_player_idx = 0
-        self._input_state = {"up": False, "down": False, "left": False, "right": False, "brake": False}
         self.keep_car_upright = True
         self._upright_lerp = 0.35
+        self.cam_angle_offset = 0.0
         self.session = None
         self.collision = None
         self.icon_hud = None
@@ -84,12 +92,18 @@ class Gameplay(BaseScreen):
 
     def update(self, ctx, dt):
         actions = self.step(ctx)
+        if actions is None:
+            return False
+        for name, phase, payload in actions:
+            if name == "view" and phase == "press":
+                self.keep_car_upright = not self.keep_car_upright
         if self.continue_button.update(ctx, actions):
             self._continue(ctx)
         if (self.session is None) or (self.session.winner_id is None) and self.handle_back(ctx, actions):
             return True
 
-        self._process_actions(actions)
+        self._apply_camera_zoom(dt)
+        self._apply_camera_rotation(dt)
         self._step_physics(dt)
         self._update_race(dt)
         self._focus_camera_on_main_player()
@@ -120,6 +134,7 @@ class Gameplay(BaseScreen):
         draw_text(surf, "↻", self.icon_hud, (255, 255, 255), (5, 10))
         draw_text(surf, f"{player.race.laps_completed + 1}" + (f" / {self.session.target_laps}" if player.race.laps_completed < self.session.target_laps else ""), self.hud_font, (255, 255, 255), (55, 5))
         draw_text(surf, "⏱", self.icon_2_hud, (255, 255, 255), (5, 60))
+        draw_right(surf, 10, str(player.race.score), self.hud_font, (255, 255, 255))
         import math
         frac, whole = math.modf(self.session.elapsed_time)
         minutes = int(whole // 60)
@@ -209,33 +224,64 @@ class Gameplay(BaseScreen):
             self.camera.y = pos.y
 
         if self.keep_car_upright:
-            target = float(player.car.transform.angle_deg)
+            base = float(player.car.transform.angle_deg)
+            target = (base + self.cam_angle_offset) % 360.0
             self.camera.rot_deg = self._lerp_deg(float(self.camera.rot_deg), target, self._upright_lerp)
-
-    def _process_actions(self, actions):
-        for name, phase, _ in actions:
-            if name == "up":
-                self._input_state["up"] = phase == "press"
-            elif name == "down":
-                self._input_state["down"] = phase == "press"
-            elif name == "left":
-                self._input_state["left"] = phase == "press"
-            elif name == "right":
-                self._input_state["right"] = phase == "press"
-            elif name == "space":
-                self._input_state["brake"] = phase == "press"
 
     def _get_input_for_player(self, idx: int) -> DriveInput:
         if idx == self.main_player_idx:
-            s = self._input_state
             return DriveInput(
-                up=s.get("up", False),
-                down=s.get("down", False),
-                left=s.get("left", False),
-                right=s.get("right", False),
-                brake=s.get("brake", False),
+                up=is_action_down("up"),
+                down=is_action_down("down"),
+                left=is_action_down("left"),
+                right=is_action_down("right"),
+                brake=is_action_down("space"),
             )
         return DriveInput()
+
+    def _apply_camera_zoom(self, dt: float):
+        MIN_ZOOM, MAX_ZOOM= 0.05, 5.0
+        ZOOM_RATE = 1.5
+
+        zoom_in_down  = is_action_down("zoom_in")
+        zoom_out_down = is_action_down("zoom_out")
+        if zoom_in_down and zoom_out_down:
+            self.camera.zoom = Camera.DEFAULT_ZOOM
+            return
+        z = self.camera.zoom
+        if zoom_in_down:
+            z *= (1.0 + ZOOM_RATE * dt)
+        elif zoom_out_down:
+            z /= (1.0 + ZOOM_RATE * dt)
+        self.camera.zoom = max(MIN_ZOOM, min(MAX_ZOOM, z))
+
+    def _wrap_deg(self, a: float) -> float:
+        return ((a + 180.0) % 360.0) - 180.0
+
+    def _apply_camera_rotation(self, dt: float):
+        ROTATE_RATE = 120.0
+
+        left = is_action_down("rotate_camera_left")
+        right = is_action_down("rotate_camera_right")
+
+        if left and right:
+            if self.keep_car_upright:
+                self.cam_angle_offset = 0.0
+            else:
+                self.camera.rot_deg = 0.0
+            return
+
+        if self.keep_car_upright:
+            if left:
+                self.cam_angle_offset = self._wrap_deg(self.cam_angle_offset - ROTATE_RATE * dt)
+            elif right:
+                self.cam_angle_offset = self._wrap_deg(self.cam_angle_offset + ROTATE_RATE * dt)
+        else:
+            if left:
+                self.camera.rot_deg -= ROTATE_RATE * dt
+            elif right:
+                self.camera.rot_deg += ROTATE_RATE * dt
+            self.camera.rot_deg %= 360.0
 
     def _step_physics(self, dt: float):
         if not (self.players and self.full_renderer and self.level_data):
