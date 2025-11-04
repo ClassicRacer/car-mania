@@ -5,10 +5,11 @@ from game.render.camera import Camera
 from game.render.level_utils import compute_piece_bounds, parse_level_code
 
 class LevelFullRenderer:
-    def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None):
+    def __init__(self, pieces, margin_px=40, hud_h=240, origin_offset=None, tri_min_zoom=0.25):
         self.pieces = pieces
         self.margin = margin_px
         self.hud_h = hud_h
+        self.tri_min_zoom = float(tri_min_zoom)
 
         if origin_offset is None:
             road = self.pieces.get("road_1")
@@ -101,6 +102,7 @@ class LevelFullRenderer:
             "seed": actual_seed,
             "scaled_surface": None,
             "scaled_size": None,
+            "textured": bool(level_row.get("textured", 0)),
 
             "road_mask": pygame.mask.from_surface(road_surf),
             "gate_mask": pygame.mask.from_surface(gate_surf),
@@ -208,6 +210,55 @@ class LevelFullRenderer:
         if reset_rotation:
             camera.rot_deg = 0.0
 
+    def _preblend_over_bg(self, rgb, bg_rgb, alpha_0_255):
+        a = alpha_0_255 / 255.0
+        r = int(round(rgb[0] * a + bg_rgb[0] * (1.0 - a)))
+        g = int(round(rgb[1] * a + bg_rgb[1] * (1.0 - a)))
+        b = int(round(rgb[2] * a + bg_rgb[2] * (1.0 - a)))
+        return (r, g, b, 255)
+
+    def _draw_bg_triangles_in_view(
+        self,
+        dest: pygame.Surface,
+        view_rect: pygame.Rect,
+        to_screen,
+        base_rgb: tuple[int, int, int],
+        seed: int | None,
+        *,
+        tile=256,                    
+        density=0.0001,
+        min_size=18, max_size=90,
+        alpha=255,
+        preblend_bg: tuple[int, int, int] | None = None
+    ):
+        import math, random
+        br, bgc, bb = base_rgb
+
+        tx0 = math.floor(view_rect.left   / tile)
+        ty0 = math.floor(view_rect.top    / tile)
+        tx1 = math.floor((view_rect.right - 1) / tile)
+        ty1 = math.floor((view_rect.bottom- 1) / tile)
+
+        for ty in range(ty0, ty1 + 1):
+            for tx in range(tx0, tx1 + 1):
+                rng = random.Random((seed or 0) ^ (tx * 73856093) ^ (ty * 19349663) ^ 0x9E3779B9)
+                tri_count = max(3, int(tile * tile * density))
+                for _ in range(tri_count):
+                    cx = tx * tile + rng.random() * tile
+                    cy = ty * tile + rng.random() * tile
+                    s  = rng.uniform(min_size, max_size)
+                    a0 = rng.random() * math.tau
+                    pts_w = []
+                    for i in range(3):
+                        ang = a0 + i * (2 * math.pi / 3) + rng.uniform(-0.35, 0.35)
+                        r   = s * rng.uniform(0.6, 1.0)
+                        pts_w.append((cx + math.cos(ang) * r, cy + math.sin(ang) * r))
+                    pts_s = [to_screen(px, py) for (px, py) in pts_w]
+                    d = rng.randint(10, 40)
+                    tri_rgb = (max(0, br - d), max(0, bgc - d), max(0, bb - d))
+                    col = self._preblend_over_bg(tri_rgb, preblend_bg, alpha) if preblend_bg else (*tri_rgb, alpha)
+                    pygame.draw.polygon(dest, col, pts_s)
+
     def render_to(self, target_surface, level_row, camera=None, actors=None, active_gate_id=None):
         tw, th = target_surface.get_size()
 
@@ -239,7 +290,7 @@ class LevelFullRenderer:
         zoom = max(1e-6, camera.zoom)
         angle = camera.rot_deg % 360.0
         angle_eps = 1e-3
-
+        do_triangles = entry["textured"] and zoom >= self.tri_min_zoom
         full_scale_needed = zoom <= 1.0 or not (angle <= angle_eps or angle >= 360.0 - angle_eps)
 
         def scale_world(target_size):
@@ -315,6 +366,26 @@ class LevelFullRenderer:
                     int(round(pivot[0] - cam_x * zoom)),
                     int(round(pivot[1] - cam_y * zoom)),
                 )
+                if do_triangles:
+                    view_w = tw / zoom
+                    view_h = th / zoom
+                    view_rect = pygame.Rect(
+                        int(math.floor(cam_x - view_w * 0.5)),
+                        int(math.floor(cam_y - view_h * 0.5)),
+                        int(math.ceil(view_w)),
+                        int(math.ceil(view_h)),
+                    )
+
+                    def to_scr(wx, wy):
+                        return (
+                            int(round(pivot[0] + (wx - cam_x) * zoom)),
+                            int(round(pivot[1] + (wy - cam_y) * zoom)),
+                        )
+
+                    self._draw_bg_triangles_in_view(
+                        target_surface, view_rect, to_scr, bg, entry.get("seed"), preblend_bg=bg
+                    )
+
                 target_surface.blit(scaled, top_left)
 
                 if actors:
@@ -334,6 +405,11 @@ class LevelFullRenderer:
                 pad = 4
                 view_w = max(1, int(math.ceil(tw / zoom)))
                 view_h = max(1, int(math.ceil(th / zoom)))
+                tri_view_rect = pygame.Rect(
+                    int(math.floor(camera.x - view_w * 0.5)) - pad,
+                    int(math.floor(camera.y - view_h * 0.5)) - pad,
+                    view_w + pad*2, view_h + pad*2
+                )
                 view_left = int(math.floor(camera.x - view_w * 0.5)) - pad
                 view_top = int(math.floor(camera.y - view_h * 0.5)) - pad
                 view_rect = pygame.Rect(view_left, view_top, view_w + pad * 2, view_h + pad * 2)
@@ -341,6 +417,16 @@ class LevelFullRenderer:
                 view_rect = view_rect.clip(world_rect)
                 if view_rect.width <= 0 or view_rect.height <= 0:
                     view_rect = world_rect
+
+                def to_scr(wx, wy):
+                    return (
+                        int(round(pivot[0] + (wx - cam_x) * zoom)),
+                        int(round(pivot[1] + (wy - cam_y) * zoom)),
+                    )
+                if do_triangles:
+                    self._draw_bg_triangles_in_view(
+                        target_surface, tri_view_rect, to_scr, bg, entry.get("seed"), preblend_bg=bg
+                        )
 
                 view = world.subsurface(view_rect)
                 scaled_size = (
@@ -354,6 +440,7 @@ class LevelFullRenderer:
                     int(round(pivot[0] - (cam_x - view_rect.x) * zoom)),
                     int(round(pivot[1] - (cam_y - view_rect.y) * zoom)),
                 )
+
                 target_surface.blit(view, screen_pos)
 
                 if actors:
@@ -374,13 +461,33 @@ class LevelFullRenderer:
 
         diag = int(math.ceil(math.hypot(tw, th)))
         canvas = pygame.Surface((diag, diag), pygame.SRCALPHA).convert_alpha()
-        canvas.fill((0, 0, 0, 0))
+        canvas.fill((*bg, 255))
 
         cxc = cyc = diag // 2
         top_left = (
             int(round(cxc - cam_x * zoom)),
             int(round(cyc - cam_y * zoom)),
         )
+        if do_triangles:
+            view_w = diag / zoom
+            view_h = diag / zoom
+            view_rect = pygame.Rect(
+                int(math.floor(cam_x - view_w * 0.5)),
+                int(math.floor(cam_y - view_h * 0.5)),
+                int(math.ceil(view_w)),
+                int(math.ceil(view_h)),
+            )
+
+            def to_canvas(wx, wy):
+                return (
+                    int(round(top_left[0] + wx * zoom)),
+                    int(round(top_left[1] + wy * zoom)),
+                )
+
+            self._draw_bg_triangles_in_view(
+                canvas, view_rect, to_canvas, bg, entry.get("seed"), preblend_bg=bg
+            )
+
         if full_scale_needed:
             target_scaled_size = (max(1, int(round(ww * zoom))), max(1, int(round(wh * zoom))))
             scaled = scale_world(target_scaled_size)
@@ -388,6 +495,9 @@ class LevelFullRenderer:
         else:
             scaled = world
             occ_scaled = entry["occluder_surface"]
+
+
+
         canvas.blit(scaled, top_left)
         if actors:
             actors_top_left = (
