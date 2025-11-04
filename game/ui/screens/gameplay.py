@@ -10,7 +10,6 @@ from game.ui.utils import draw_text, center_text_on_oval, draw_right
 from game.ui.widgets.button import Button
 from game.world.collision import CollisionResolver
 from game.io.input import is_action_down
-from game.core.engine.loop import get_fps
 
 class Gameplay(BaseScreen):
     LAYER_NAME = "gameplay"
@@ -136,8 +135,6 @@ class Gameplay(BaseScreen):
         draw_text(surf, f"{player.race.laps_completed + 1}" + (f" / {self.session.target_laps}" if player.race.laps_completed < self.session.target_laps else ""), self.hud_font, (255, 255, 255), (55, 5))
         draw_text(surf, "⏱", self.icon_2_hud, (255, 255, 255), (5, 60))
         draw_right(surf, 10, str(player.race.score), self.hud_font, (255, 255, 255))
-        draw_text(surf, f"{self.camera.zoom}", self.font, (255, 255, 255), (5, 300))
-        draw_text(surf, f"{int(get_fps())}", self.font, (255, 255, 255), (5, 400))
         import math
         frac, whole = math.modf(self.session.elapsed_time)
         minutes = int(whole // 60)
